@@ -16,21 +16,14 @@ else
 	ARCH = -m64
 endif
 
-# Define the source and output files
-SRC = program.asm
-OBJ = program.o
-
 # Assemble and link the program
-out: $(OBJ)
-	as $(ARCH) -o $@ $<
-	ld -o $@ $@
+compile:
+	gcc $(ARCH) runtime.c output.s -o output
 
-# Target to run the output
-run: $(OUTPUT)
-	./$(OUTPUT)
+run: compile
+	./output
 
-# Clean the build files
 clean:
-	rm -f $(OBJ) $(OUTPUT)
+	rm -f output
 
 .PHONY: all run clean
