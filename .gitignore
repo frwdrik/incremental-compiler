@@ -1,0 +1,197 @@
+.lsp
+lsp
+.DS_Store
+*.log
+*.iws
+*Db.properties
+*Db.script
+.settings
+.classpath
+.project
+eclipse
+stacktrace.log
+target
+out
+logs
+/plugins
+/node_modules
+*.sublime-project
+*.sublime-workspace
+set-monghq.sh
+*.todo
+ARDOQ_LOG_DIR_IS_UNDEFINED/
+ardoq-attachments
+.nrepl-port
+/build.xml
+/.lein-env
+ardoq-attachemnts/
+logback-local.xml
+
+.clj-kondo/.cache
+.circleci/.cache
+Dockerfile.old
+
+# Created by https://www.gitignore.io/api/emacs,clojure,intellij+all
+
+### Clojure ###
+pom.xml.asc
+*.jar
+*.class
+/lib/
+/classes/
+/target/
+/checkouts/
+.lein-deps-sum
+.lein-repl-history
+.lein-plugins/
+.lein-failures
+.nrepl-port
+
+### Emacs ###
+# -*- mode: gitignore; -*-
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# Org-mode
+.org-id-locations
+*_archive
+
+# flymake-mode
+*_flymake.*
+
+# eshell files
+/eshell/history
+/eshell/lastdir
+
+# elpa packages
+/elpa/
+
+# reftex files
+*.rel
+
+# AUCTeX auto folder
+/auto/
+
+# cask packages
+.cask/
+dist/
+
+# Flycheck
+flycheck_*.el
+
+# server auth directory
+/server/
+
+# projectiles files
+.projectile
+projectile-bookmarks.eld
+
+# directory configuration
+.dir-locals.el
+
+# saveplace
+places
+
+# url cache
+url/cache/
+
+# cedet
+ede-projects.el
+
+# smex
+smex-items
+
+# company-statistics
+company-statistics-cache.el
+
+# anaconda-mode
+anaconda-mode/
+
+### Intellij+all ###
+# Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio and Webstorm
+# Reference: https://intellij-support.jetbrains.com/hc/en-us/articles/206544839
+
+# User-specific stuff:
+.idea/**/workspace.xml
+.idea/**/tasks.xml
+.idea/dictionaries
+
+# Sensitive or high-churn files:
+.idea/**/dataSources/
+.idea/**/dataSources.ids
+.idea/**/dataSources.xml
+.idea/**/dataSources.local.xml
+.idea/**/sqlDataSources.xml
+.idea/**/dynamic.xml
+.idea/**/uiDesigner.xml
+
+# Gradle:
+.idea/**/gradle.xml
+.idea/**/libraries
+
+# CMake
+cmake-build-debug/
+
+# Mongo Explorer plugin:
+.idea/**/mongoSettings.xml
+
+## File-based project format:
+*.iws
+
+## Plugin-specific files:
+
+# IntelliJ
+/out/
+bin
+
+# mpeltonen/sbt-idea plugin
+.idea_modules/
+
+# JIRA plugin
+atlassian-ide-plugin.xml
+
+# Cursive Clojure plugin
+.idea/replstate.xml
+
+# VS Code
+.vscode
+
+# Ruby plugin and RubyMine
+/.rakeTasks
+
+# Crashlytics plugin (for Android Studio and IntelliJ)
+com_crashlytics_export_strings.xml
+crashlytics.properties
+crashlytics-build.properties
+fabric.properties
+
+### Intellij+all Patch ###
+# Ignores the whole idea folder
+# See https://github.com/joeblau/gitignore.io/issues/186 and https://github.com/joeblau/gitignore.io/issues/360
+
+.idea/
+ardoq-api.iml
+
+# Environment files (for setting env variables with IntelliJ, https://github.com/Ashald/EnvFile)
+dev.env
+.env
+
+/dev/monkeypatch.clj
+
+# Excel temporary
+~$*.xls*
+
+# End of https://www.gitignore.io/api/emacs,clojure,intellij+all
+.eastwood
+
+.calva
+.cpcache
+.clj-kondo/
+src/ardoq/operations_new_reports.clj
+.portal
