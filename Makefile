@@ -11,7 +11,7 @@ UNAME_S := $(shell uname -s)
 
 # Set the appropriate architecture flag
 ifeq ($(UNAME_S), Darwin)
-	ARCH = -arch x86_64
+	ARCH = -arch -x86_64
 endif
 
 # Assemble and link the program
