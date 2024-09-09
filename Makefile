@@ -12,16 +12,14 @@ UNAME_S := $(shell uname -s)
 # Set the appropriate architecture flag
 ifeq ($(UNAME_S), Darwin)
 	ARCH = -arch x86_64
-else
-	ARCH = -m64
 endif
 
 # Assemble and link the program
 compile:
-	gcc $(ARCH) runtime.c output.s -o output
+	$(ARCH)	gcc runtime.c output.s -o output
 
 run: compile
-	./output
+	@./output
 
 clean:
 	rm -f output

@@ -195,3 +195,7 @@ dev.env
 .clj-kondo/
 src/ardoq/operations_new_reports.clj
 .portal
+
+runtime.o
+output.o
+output.s
