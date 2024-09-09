@@ -14,8 +14,14 @@ ifeq ($(UNAME_S), Darwin)
 	ARCH = -arch -x86_64
 endif
 
+SCHEME_ENTRY := _scheme_entry
+ifeq ($(UNAME_S), Darwin)
+	SCHEME_ENTRY = _scheme_entry
+endif
+
 # Assemble and link the program
 compile:
+	sed -i 's/scheme_entry/${SCHEME_ENTRY}/g' output.s
 	$(ARCH)	gcc runtime.c output.s -o output
 
 run: compile
