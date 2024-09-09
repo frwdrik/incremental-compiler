@@ -1,5 +1,6 @@
 (ns compiler
-  (:require [clojure.java.shell :as sh]))
+  (:require [clojure.java.shell :as sh]
+            [clojure.test :refer [deftest is]]))
 
 ;; want to write a function that emits something like this:
 
@@ -21,7 +22,7 @@
           (println "scheme_entry:")
           (println "\tpushq %rbp")
           (println "\tmovq %rsp, %rbp")
-          (println "\tmovl $39, %eax")
+          (println (format "\tmovl $%d, %%eax" program))
           (println "\tpopq %rbp")
           (println "\tret"))]
     (spit "output.s" asm)))
@@ -33,4 +34,8 @@
       (:out (sh/sh "./output"))
       (str "Error during compilation: " err))))
 
-(compile-and-run [])
+
+(deftest emit-integers
+  (is (= (compile-and-run 2) "2\n"))
+  (is (= (compile-and-run true) "true\n"))
+  )
