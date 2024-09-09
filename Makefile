@@ -1,3 +1,5 @@
+.DEFAULT_GOAL := run
+
 # Define variables for the compiler and tools
 CC = foo
 AS = as
@@ -14,14 +16,14 @@ ifeq ($(UNAME_S), Darwin)
 	ARCH = -arch -x86_64
 endif
 
-SCHEME_ENTRY := _scheme_entry
+SCHEME_ENTRY := scheme_entry
 ifeq ($(UNAME_S), Darwin)
 	SCHEME_ENTRY = _scheme_entry
 endif
 
 # Assemble and link the program
 compile:
-	sed -i 's/scheme_entry/${SCHEME_ENTRY}/g' output.s
+	sed -i -e 's/[^_]scheme_entry/ $(SCHEME_ENTRY)/g' output.s
 	$(ARCH)	gcc runtime.c output.s -o output
 
 run: compile
