@@ -22,7 +22,7 @@
           (println "scheme_entry:")
           (println "\tpushq %rbp")
           (println "\tmovq %rsp, %rbp")
-          (println (format "\tmovl $%d, %%eax" program))
+          (println (format "\tmovl $%d, %%eax" (immediate-rep program)))
           (println "\tpopq %rbp")
           (println "\tret"))]
     (spit "output.s" asm)))
@@ -34,8 +34,15 @@
       (:out (sh/sh "./output"))
       (str "Error during compilation: " err))))
 
+(defn immediate-rep [x]
+  (cond
+    (integer? x)
+    (bit-shift-left x 2)))
 
 (deftest emit-integers
-  (is (= (compile-and-run 2) "2\n"))
-  (is (= (compile-and-run true) "true\n"))
-  )
+  (is (= "2\n" (compile-and-run 2)))
+  (is (= "true\n" (compile-and-run true))))
+
+(deftest immediate-rep-test
+  (is (= 2r1100 (immediate-rep 3)))
+  (is (= "11111111111111111111111111111100" (Integer/toBinaryString (immediate-rep -1)))))
