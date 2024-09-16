@@ -17,7 +17,12 @@
 (defn immediate-rep [x]
   (cond
     (integer? x)
-    (bit-shift-left x 2)))
+    (bit-shift-left x 2)
+
+    (boolean? x)
+    (if x
+      2r01101111
+      2r00101111)))
 
 (defn compile [program]
   (let [asm
@@ -41,14 +46,21 @@
 
 (deftest emit-integers
   (is (= "2\n" (compile-and-run 2)))
-  (is (= "-42\n" (compile-and-run -42)))
-  (is (= "true\n" (compile-and-run true))))
+  (is (= "-42\n" (compile-and-run -42))))
+
+(deftest emit-booleans
+  (is (= "true\n" (compile-and-run true)))
+  (is (= "false\n" (compile-and-run false))))
 
 (deftest immediate-rep-test
   (is (= 2r1100 (immediate-rep 3)))
-  (is (= "11111111111111111111111111111100" (Integer/toBinaryString (immediate-rep -1)))))
+  (is (= "11111111111111111111111111111100" (Integer/toBinaryString (immediate-rep -1))))
+  (is (= 111 (immediate-rep true)))
+  (is (= 0x6F (immediate-rep true)))
+  (is (= 47 (immediate-rep false)))
+  (is (= 0x2F (immediate-rep false))))
 
 ;; First, run the Clojure compiler
-(compile-and-run 42)
+(compile-and-run true)
 ;; Then, run the makefile
 ;; $ make run
