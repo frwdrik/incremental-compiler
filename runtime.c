@@ -13,6 +13,10 @@ int toFixnum(int x) {
   return (x >> 2);
 }
 
+int otherImmediate(int x) {
+  return (x & 15) == 15;
+}
+
 int main(){
     int ret = scheme_entry();
     /* If x is fixnum type
