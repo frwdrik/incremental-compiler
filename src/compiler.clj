@@ -14,6 +14,11 @@
 ;;     popq	   %rbp
 ;;     ret
 
+(defn immediate-rep [x]
+  (cond
+    (integer? x)
+    (bit-shift-left x 2)))
+
 (defn compile [program]
   (let [asm
         (with-out-str
@@ -34,15 +39,16 @@
       (:out (sh/sh "./output"))
       (str "Error during compilation: " err))))
 
-(defn immediate-rep [x]
-  (cond
-    (integer? x)
-    (bit-shift-left x 2)))
-
 (deftest emit-integers
   (is (= "2\n" (compile-and-run 2)))
+  (is (= "-42\n" (compile-and-run -42)))
   (is (= "true\n" (compile-and-run true))))
 
 (deftest immediate-rep-test
   (is (= 2r1100 (immediate-rep 3)))
   (is (= "11111111111111111111111111111100" (Integer/toBinaryString (immediate-rep -1)))))
+
+;; First, run the Clojure compiler
+(compile-and-run 42)
+;; Then, run the makefile
+;; $ make run
