@@ -17,6 +17,10 @@ int otherImmediate(int x) {
   return (x & 15) == 15;
 }
 
+int toChar(int x) {
+  return (x >> 8);
+}
+
 int main(){
     int ret = scheme_entry();
     /* If x is fixnum type
@@ -29,6 +33,10 @@ int main(){
     }
     if (ret == bool_f) {
       printf("false\n");
+    }
+    /* Check null */
+    if (otherImmediate(ret)) {
+      printf("#\\%c\n", toChar(ret));
     }
     return 0;
 }
