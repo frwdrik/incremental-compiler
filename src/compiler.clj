@@ -27,7 +27,10 @@
     (char? x)
     (-> (int x)
         (bit-shift-left 8)
-        (bit-or 2r00001111))))
+        (bit-or 2r00001111))
+    
+    (nil? x)
+    2r111111))
 
 (defn compile [program]
   (let [asm
@@ -53,7 +56,6 @@
   (is (= "2\n" (compile-and-run 2)))
   (is (= "-42\n" (compile-and-run -42))))
 
-
 (deftest emit-booleans
   (is (= "true\n" (compile-and-run true)))
   (is (= "false\n" (compile-and-run false))))
@@ -61,6 +63,9 @@
 (deftest emit-characters
   (is (= "#\\A\n" (compile-and-run \A)))
   (is (= "#\\a\n" (compile-and-run \a))))
+
+(deftest emit-nil
+  (is (= "()\n" (compile-and-run nil))))
 
 (deftest immediate-rep-test
   (is (= 2r1100 (immediate-rep 3)))
