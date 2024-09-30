@@ -74,8 +74,8 @@
 
 (defn emit-function-header [function-header]
   (println "\t.text")
-  (println "\t.globl scheme_entry")
-  (println "scheme_entry:"))
+  (println (str "\t.globl " function-header))
+  (println (str function-header ":")))
 
 (defn emit-program [program]
   (let [asm
