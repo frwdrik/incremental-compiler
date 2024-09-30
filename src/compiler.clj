@@ -103,7 +103,7 @@
 
 (defn compile-and-run [program]
   (emit-program program)
-  (let [{:keys [exit out err]} (sh/sh "make" "run")]
+  (let [{:keys [exit _out err]} (sh/sh "make" "run")]
     (if (= exit 0)
       (:out (sh/sh "./output"))
       (str "Error during compilation: " err))))
