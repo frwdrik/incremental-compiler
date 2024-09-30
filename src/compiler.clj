@@ -32,21 +32,61 @@
     (nil? x)
     2r111111))
 
-(defn compile [program]
+(defn immediate? [x]
+  (or (integer? x)
+      (boolean? x)
+      (char? x)
+      (nil? x)))
+
+(declare emit-expr)
+
+(defn fxadd1 [x]
+  (emit-expr x)
+  (println (format "\taddl $%s, %%eax" (immediate-rep 1))))
+
+(defn fxsub1 [x]
+  (emit-expr x)
+  (println (format "\tsubl $%s, %%eax" (immediate-rep 1))))
+
+(defn emit-immediate [x]
+  (println (format "\tmovl $%d, %%eax" (immediate-rep x))))
+
+(def prim-call
+  {'fxadd1 {:args-count 1
+            :emitter fxadd1}
+   'fxsub1 {:args-count 1
+            :emitter fxsub1}})
+
+(defn emit-prim-call [x args]
+  (let [{:keys [args-count emitter]} (prim-call x)]
+    (when-not (= args-count (count args))
+      (ex-info (str "Wrong number of arguments to " x) {}))
+    (apply emitter args)))
+
+(defn emit-expr [x]
+  (cond
+    (immediate? x)
+    (emit-immediate x)
+
+    (and (list? x)
+         (contains? prim-call (first x)))
+    (emit-prim-call (first x) (rest x))))
+
+(defn emit-function-header [function-header]
+  (println "\t.text")
+  (println "\t.globl scheme_entry")
+  (println "scheme_entry:"))
+
+(defn emit-program [program]
   (let [asm
         (with-out-str
-          (println "\t.text")
-          (println "\t.globl scheme_entry")
-          (println "scheme_entry:")
-          (println "\tpushq %rbp")
-          (println "\tmovq %rsp, %rbp")
-          (println (format "\tmovl $%d, %%eax" (immediate-rep program)))
-          (println "\tpopq %rbp")
+          (emit-function-header "scheme_entry")
+          (emit-expr program)
           (println "\tret"))]
     (spit "output.s" asm)))
 
 (defn compile-and-run [program]
-  (compile program)
+  (emit-program program)
   (let [{:keys [exit out err]} (sh/sh "make" "run")]
     (if (= exit 0)
       (:out (sh/sh "./output"))
@@ -74,6 +114,12 @@
   (is (= 0x6F (immediate-rep true)))
   (is (= 47 (immediate-rep false)))
   (is (= 0x2F (immediate-rep false))))
+
+(deftest prim-call-test
+  (is (= "2\n" (compile-and-run '(fxadd1 1))))
+  (is (= "1\n" (compile-and-run '(fxsub1 2))))
+  (is (= "1\n" (compile-and-run '(fxsub1 (fxadd1 1)))))
+  (is (= "-1\n" (compile-and-run '(fxsub1 0)))))
 
 ;; First, run the Clojure compiler
 (compile-and-run true)
