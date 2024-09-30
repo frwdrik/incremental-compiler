@@ -57,8 +57,8 @@
   (emit-expr x)
   (println (format "\tand $%s, %%al" fxmask))
   (println (format "\tcmp $%s, %%al" fxtag))
-  (println "\tsete %%al")
-  (println "\tmovzbl %%al, %%eax")
+  (println "\tsete %al")
+  (println "\tmovzbl %al, %eax")
   (println (format "\tsal $%s, %%al" bool-bit))
   (println (format "\tor $%s, %%al" bool-f)))
 
