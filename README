@@ -1,0 +1,15 @@
+We're following Abdulaziz Ghuloum's "An Incremental Approach to
+Compiler Construction" and trying to build a simple scheme-to-x86
+compiler.
+
+References:
+  Abdulaziz Ghuloum - An Incremental Approach to Compiler Construction
+    http://scheme2006.cs.uchicago.edu/11-ghuloum.pdf
+
+  Abdulaziz Ghuloum - Compilers: Backend to Frontend and Back to Front Again
+    https://raw.githubusercontent.com/namin/inc/refs/heads/master/docs/tutorial.pdf
+  This is an extended draft tutorial
+
+  namin / inc - someone else's implementation of the same compiler
+  we're making
+    https://github.com/namin/inc
