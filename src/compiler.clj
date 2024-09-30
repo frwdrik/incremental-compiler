@@ -14,6 +14,11 @@
 ;;     popq	   %rbp
 ;;     ret
 
+(def fxmask 2r11)
+(def fxtag 2r00)
+(def bool-bit 6)
+(def bool-f 2r00101111)
+
 (defn immediate-rep [x]
   (cond
     (integer? x)
@@ -48,6 +53,15 @@
   (emit-expr x)
   (println (format "\tsubl $%s, %%eax" (immediate-rep 1))))
 
+(defn fixnum? [x]
+  (emit-expr x)
+  (println (format "\tand $%s, %%al" fxmask))
+  (println (format "\tcmp $%s, %%al" fxtag))
+  (println "\tsete %%al")
+  (println "\tmovzbl %%al, %%eax")
+  (println (format "\tsal $%s, %%al" bool-bit))
+  (println (format "\tor $%s, %%al" bool-f)))
+
 (defn emit-immediate [x]
   (println (format "\tmovl $%d, %%eax" (immediate-rep x))))
 
@@ -55,7 +69,9 @@
   {'fxadd1 {:args-count 1
             :emitter fxadd1}
    'fxsub1 {:args-count 1
-            :emitter fxsub1}})
+            :emitter fxsub1}
+   'fixnum? {:args-count 1
+             :emitter fixnum?}})
 
 (defn emit-prim-call [x args]
   (let [{:keys [args-count emitter]} (prim-call x)]
@@ -119,7 +135,9 @@
   (is (= "2\n" (compile-and-run '(fxadd1 1))))
   (is (= "1\n" (compile-and-run '(fxsub1 2))))
   (is (= "1\n" (compile-and-run '(fxsub1 (fxadd1 1)))))
-  (is (= "-1\n" (compile-and-run '(fxsub1 0)))))
+  (is (= "-1\n" (compile-and-run '(fxsub1 0))))
+  (is (= "true\n" (compile-and-run '(fixnum? 3))))
+  (is (= "false\n" (compile-and-run '(fixnum? true)))))
 
 ;; First, run the Clojure compiler
 (compile-and-run true)
