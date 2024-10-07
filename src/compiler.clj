@@ -16,6 +16,10 @@
 
 (def fxmask 2r11)
 (def fxtag 2r00)
+(def objectmask 2r111111)
+(def booltag 2r101111)
+(def chartag 2r001111)
+(def niltag 2r111111)
 (def bool-bit 6)
 (def bool-f 2r00101111)
 
@@ -61,6 +65,37 @@
   (println "\tmovzbl %al, %eax")
   (println (format "\tsal $%s, %%al" bool-bit))
   (println (format "\tor $%s, %%al" bool-f)))
+;;=> Syntax error compiling at (src/compiler.clj:57:3).
+;;   Unable to resolve symbol: emit-expr in this context
+;;   
+
+(defn bool? [x]
+  (emit-expr x)
+  (println (format "\tand $%s, %%al" objectmask))
+  (println (format "\tcmp $%s, %%al" booltag))
+  (println "\tsete %al")
+  (println "\tmovzbl %al, %eax")
+  (println (format "\tsal $%s, %%al" bool-bit))
+  (println (format "\tor $%s, %%al" bool-f)))
+
+(defn char? [x]
+  (emit-expr x)
+  (println (format "\tand $%s, %%al" objectmask))
+  (println (format "\tcmp $%s, %%al" chartag))
+  (println "\tsete %al")
+  (println "\tmovzbl %al, %eax")
+  (println (format "\tsal $%s, %%al" bool-bit))
+  (println (format "\tor $%s, %%al" bool-f)))
+
+(defn nil? [x]
+  (emit-expr x)
+  (println (format "\tand $%s, %%al" objectmask))
+  (println (format "\tcmp $%s, %%al" niltag))
+  (println "\tsete %al")
+  (println "\tmovzbl %al, %eax")
+  (println (format "\tsal $%s, %%al" bool-bit))
+  (println (format "\tor $%s, %%al" bool-f)))
+
 
 (defn emit-immediate [x]
   (println (format "\tmovl $%d, %%eax" (immediate-rep x))))
@@ -71,7 +106,13 @@
    'fxsub1 {:args-count 1
             :emitter fxsub1}
    'fixnum? {:args-count 1
-             :emitter fixnum?}})
+             :emitter fixnum?}
+   'bool? {:args-count 1
+           :emitter bool?}
+   'char? {:args-count 1
+           :emitter char?}
+   'nil? {:args-count 1
+           :emitter nil?}})
 
 (defn emit-prim-call [x args]
   (let [{:keys [args-count emitter]} (prim-call x)]
@@ -137,7 +178,14 @@
   (is (= "1\n" (compile-and-run '(fxsub1 (fxadd1 1)))))
   (is (= "-1\n" (compile-and-run '(fxsub1 0))))
   (is (= "true\n" (compile-and-run '(fixnum? 3))))
-  (is (= "false\n" (compile-and-run '(fixnum? true)))))
+  (is (= "false\n" (compile-and-run '(fixnum? true))))
+  (is (= "true\n" (compile-and-run '(bool? true))))
+  (is (= "true\n" (compile-and-run '(bool? false))))
+  (is (= "false\n" (compile-and-run '(bool? 2))))
+  (is (= "false\n" (compile-and-run '(char? 2))))
+  (is (= "true\n" (compile-and-run '(char? "#\\A\n"))))
+  (is (= "false\n" (compile-and-run '(nil? 2))))
+  (is (= "true\n" (compile-and-run '(nil? nil)))))
 
 ;; First, run the Clojure compiler
 (compile-and-run true)
