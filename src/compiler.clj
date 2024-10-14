@@ -138,6 +138,28 @@
       (ex-info (str "Wrong number of arguments to " x) {}))
     (apply emitter args)))
 
+(let [n (volatile! -1)]
+ (defn unique-label []
+   (format "L.%s" (vswap! n inc))))
+
+(defn if? [x]
+  (and (seq? x)
+       (= 'if (first x))
+       (= (count x) 4)))
+
+(defn emit-if [[_if test then else]]
+  ;; 0: create labels
+  ;; 1: emit test
+  ;; 2: do a compare
+  ;; 3: jump to right places based on compare
+  ;; 4: emit code for then and else brances in correct places
+  (let [altern-label (unique-label)
+        end-label (unique-label)]
+    (emit-expr test)
+    (println (format "\tcmp $%s, %%eax" bool-f))
+    ;; 
+    ))
+
 (defn emit-expr [x]
   (cond
     (immediate? x)
@@ -145,7 +167,10 @@
 
     (and (list? x)
          (contains? prim-call (first x)))
-    (emit-prim-call (first x) (rest x))))
+    (emit-prim-call (first x) (rest x))
+
+    (if? x)
+    (emit-if x)))
 
 (defn emit-function-header [function-header]
   (println "\t.text")
@@ -212,6 +237,12 @@
   (is (= "#\\A\n" (compile-and-run '(fixnum->char 65))))
   
   (is (= "65\n" (compile-and-run '(char->fixnum (fixnum->char 65))))))
+
+(deftest if-expr
+  (is (= "true\n" (compile-and-run '(if false false true))))
+  (is (= "true\n" (compile-and-run '(if true true false))))
+  (is (= "true\n" (compile-and-run '(if (bool? false) true false))))
+  )
 
 ;; First, run the Clojure compiler
 (compile-and-run true)
