@@ -176,8 +176,12 @@
         end-label (unique-label)]
     (emit-expr test)
     (println (format "\tcmp $%s, %%eax" bool-f))
-    ;; 
-    ))
+    (println (format "\tje %s" altern-label))
+    (emit-expr then)
+    (println (format "\tjmp %s" end-label))
+    (println (format "%s:" altern-label))
+    (emit-expr else)
+    (println (format "%s:" end-label))))
 
 (defn emit-expr [x]
   (cond
@@ -261,7 +265,8 @@
   (is (= "true\n" (compile-and-run '(if false false true))))
   (is (= "true\n" (compile-and-run '(if true true false))))
   (is (= "true\n" (compile-and-run '(if (bool? false) true false))))
-  )
+  (is (= "5\n" (compile-and-run '(if false 3 5))))
+  (is (= "3\n" (compile-and-run '(if true 3 5)))))
 
 ;; First, run the Clojure compiler
 (compile-and-run true)
