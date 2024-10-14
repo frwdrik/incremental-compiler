@@ -147,6 +147,25 @@
        (= 'if (first x))
        (= (count x) 4)))
 
+;; 	.text
+;; 	.globl	main
+;; main:
+;; 	movl	$0, -4(%rbp) 
+;; 	cmpl	$0, -4(%rbp)
+;; 	je	.L2
+;; 	movl	$3, %eax
+;; 	jmp	.L3
+;; .L2:
+;; 	movl	$5, %eax
+;; .L3:
+;; 	ret
+
+;; (test) -- then --  L3
+;;      \             /
+;;       \           /
+;;         L2: else   
+
+
 (defn emit-if [[_if test then else]]
   ;; 0: create labels
   ;; 1: emit test
