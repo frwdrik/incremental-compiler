@@ -202,7 +202,9 @@
   (is (= "true\n" (compile-and-run '(null? nil))))
 
   (is (= "#\\a\n" (compile-and-run '(fixnum->char 97))))
-  (is (= "#\\A\n" (compile-and-run '(fixnum->char 65)))))
+  (is (= "#\\A\n" (compile-and-run '(fixnum->char 65))))
+  
+  (is (= "65\n" (compile-and-run '(char->fixnum (fixnum->char 65))))))
 
 ;; First, run the Clojure compiler
 (compile-and-run true)
