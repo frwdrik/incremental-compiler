@@ -106,6 +106,11 @@
   (println "\tsal $6, %eax")
   (println (format "\tor $%s, %%eax" chartag)))
 
+(defn char->fixnum [x]
+  (emit-expr x)
+  (println "\tsar $6, %eax")
+)
+
 (defn emit-immediate [x]
   (println (format "\tmovl $%d, %%eax" (immediate-rep x))))
 
@@ -118,12 +123,14 @@
              :emitter fixnum?}
    'bool? {:args-count 1
            :emitter bool?}
-   'character? {:args-count 1
-           :emitter character?}
+   'character? {:args-count 1 
+                :emitter character?}
    'null? {:args-count 1
            :emitter null?}
    'fixnum->char {:args-count 1
-                  :emitter fixnum->char}})
+                  :emitter fixnum->char}
+   'char->fixnum {:args-count 1
+                  :emitter char->fixnum }})
 
 (defn emit-prim-call [x args]
   (let [{:keys [args-count emitter]} (prim-call x)]
