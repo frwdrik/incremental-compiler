@@ -78,7 +78,7 @@
   (println (format "\tsal $%s, %%al" bool-bit))
   (println (format "\tor $%s, %%al" bool-f)))
 
-(defn char? [x]
+(defn character? [x]
   (emit-expr x)
   (println (format "\tand $%s, %%al" objectmask))
   (println (format "\tcmp $%s, %%al" chartag))
@@ -87,7 +87,7 @@
   (println (format "\tsal $%s, %%al" bool-bit))
   (println (format "\tor $%s, %%al" bool-f)))
 
-(defn nil? [x]
+(defn null? [x]
   (emit-expr x)
   (println (format "\tand $%s, %%al" objectmask))
   (println (format "\tcmp $%s, %%al" niltag))
@@ -109,10 +109,10 @@
              :emitter fixnum?}
    'bool? {:args-count 1
            :emitter bool?}
-   'char? {:args-count 1
-           :emitter char?}
-   'nil? {:args-count 1
-           :emitter nil?}})
+   'character? {:args-count 1
+           :emitter character?}
+   'null? {:args-count 1
+           :emitter null?}})
 
 (defn emit-prim-call [x args]
   (let [{:keys [args-count emitter]} (prim-call x)]
@@ -182,10 +182,10 @@
   (is (= "true\n" (compile-and-run '(bool? true))))
   (is (= "true\n" (compile-and-run '(bool? false))))
   (is (= "false\n" (compile-and-run '(bool? 2))))
-  (is (= "false\n" (compile-and-run '(char? 2))))
-  (is (= "true\n" (compile-and-run '(char? "#\\A\n"))))
-  (is (= "false\n" (compile-and-run '(nil? 2))))
-  (is (= "true\n" (compile-and-run '(nil? nil)))))
+  (is (= "false\n" (compile-and-run '(character? 2))))
+  (is (= "true\n" (compile-and-run '(character? \A))))
+  (is (= "false\n" (compile-and-run '(null? 2))))
+  (is (= "true\n" (compile-and-run '(null? nil)))))
 
 ;; First, run the Clojure compiler
 (compile-and-run true)
