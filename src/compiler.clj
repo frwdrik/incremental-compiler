@@ -16,12 +16,17 @@
 
 (def fxmask 2r11)
 (def fxtag 2r00)
+
 (def objectmask 2r111111)
+
 (def booltag 2r101111)
-(def chartag 2r001111)
-(def niltag 2r111111)
 (def bool-bit 6)
+(def bool-t 2r01101111)
 (def bool-f 2r00101111)
+
+(def chartag 2r001111)
+
+(def niltag 2r111111)
 
 (defn immediate-rep [x]
   (cond
@@ -30,13 +35,13 @@
 
     (boolean? x)
     (if x
-      2r01101111
-      2r00101111)
+      bool-t
+      bool-f)
 
     (char? x)
     (-> (int x)
         (bit-shift-left 8)
-        (bit-or 2r00001111))
+        (bit-or chartag))
     
     (nil? x)
     2r111111))
@@ -96,6 +101,10 @@
   (println (format "\tsal $%s, %%al" bool-bit))
   (println (format "\tor $%s, %%al" bool-f)))
 
+(defn fixnum->char [x]
+  (emit-expr x)
+  (println "\tsal $6, %eax")
+  (println (format "\tor $%s, %%eax" chartag)))
 
 (defn emit-immediate [x]
   (println (format "\tmovl $%d, %%eax" (immediate-rep x))))
@@ -112,7 +121,9 @@
    'character? {:args-count 1
            :emitter character?}
    'null? {:args-count 1
-           :emitter null?}})
+           :emitter null?}
+   'fixnum->char {:args-count 1
+                  :emitter fixnum->char}})
 
 (defn emit-prim-call [x args]
   (let [{:keys [args-count emitter]} (prim-call x)]
@@ -170,13 +181,16 @@
   (is (= 111 (immediate-rep true)))
   (is (= 0x6F (immediate-rep true)))
   (is (= 47 (immediate-rep false)))
-  (is (= 0x2F (immediate-rep false))))
+  (is (= 0x2F (immediate-rep false)))
+  (is (= "#\\a\n" (compile-and-run \a)))
+  (is (= "#\\A\n" (compile-and-run \A))))
 
 (deftest prim-call-test
   (is (= "2\n" (compile-and-run '(fxadd1 1))))
   (is (= "1\n" (compile-and-run '(fxsub1 2))))
   (is (= "1\n" (compile-and-run '(fxsub1 (fxadd1 1)))))
   (is (= "-1\n" (compile-and-run '(fxsub1 0))))
+
   (is (= "true\n" (compile-and-run '(fixnum? 3))))
   (is (= "false\n" (compile-and-run '(fixnum? true))))
   (is (= "true\n" (compile-and-run '(bool? true))))
@@ -185,7 +199,10 @@
   (is (= "false\n" (compile-and-run '(character? 2))))
   (is (= "true\n" (compile-and-run '(character? \A))))
   (is (= "false\n" (compile-and-run '(null? 2))))
-  (is (= "true\n" (compile-and-run '(null? nil)))))
+  (is (= "true\n" (compile-and-run '(null? nil))))
+
+  (is (= "#\\a\n" (compile-and-run '(fixnum->char 97))))
+  (is (= "#\\A\n" (compile-and-run '(fixnum->char 65)))))
 
 ;; First, run the Clojure compiler
 (compile-and-run true)
