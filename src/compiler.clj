@@ -54,16 +54,16 @@
 
 (declare emit-expr)
 
-(defn fxadd1 [x]
-  (emit-expr x)
+(defn fxadd1 [si x]
+  (emit-expr si x)
   (println (format "\taddl $%s, %%eax" (immediate-rep 1))))
 
-(defn fxsub1 [x]
-  (emit-expr x)
+(defn fxsub1 [si x]
+  (emit-expr si x)
   (println (format "\tsubl $%s, %%eax" (immediate-rep 1))))
 
-(defn fixnum? [x]
-  (emit-expr x)
+(defn fixnum? [si x]
+  (emit-expr si x)
   (println (format "\tand $%s, %%al" fxmask))
   (println (format "\tcmp $%s, %%al" fxtag))
   (println "\tsete %al")
@@ -74,8 +74,8 @@
 ;;   Unable to resolve symbol: emit-expr in this context
 ;;   
 
-(defn bool? [x]
-  (emit-expr x)
+(defn bool? [si x]
+  (emit-expr si x)
   (println (format "\tand $%s, %%al" objectmask))
   (println (format "\tcmp $%s, %%al" booltag))
   (println "\tsete %al")
@@ -83,8 +83,8 @@
   (println (format "\tsal $%s, %%al" bool-bit))
   (println (format "\tor $%s, %%al" bool-f)))
 
-(defn character? [x]
-  (emit-expr x)
+(defn character? [si x]
+  (emit-expr si x)
   (println (format "\tand $%s, %%al" objectmask))
   (println (format "\tcmp $%s, %%al" chartag))
   (println "\tsete %al")
@@ -92,8 +92,8 @@
   (println (format "\tsal $%s, %%al" bool-bit))
   (println (format "\tor $%s, %%al" bool-f)))
 
-(defn null? [x]
-  (emit-expr x)
+(defn null? [si x]
+  (emit-expr si x)
   (println (format "\tand $%s, %%al" objectmask))
   (println (format "\tcmp $%s, %%al" niltag))
   (println "\tsete %al")
@@ -101,13 +101,13 @@
   (println (format "\tsal $%s, %%al" bool-bit))
   (println (format "\tor $%s, %%al" bool-f)))
 
-(defn fixnum->char [x]
-  (emit-expr x)
+(defn fixnum->char [si x]
+  (emit-expr si x)
   (println "\tsal $6, %eax")
   (println (format "\tor $%s, %%eax" chartag)))
 
-(defn char->fixnum [x]
-  (emit-expr x)
+(defn char->fixnum [si x]
+  (emit-expr si x)
   (println "\tsar $6, %eax")
 )
 
@@ -132,11 +132,11 @@
    'char->fixnum {:args-count 1
                   :emitter char->fixnum }})
 
-(defn emit-prim-call [x args]
+(defn emit-prim-call [si x args]
   (let [{:keys [args-count emitter]} (prim-call x)]
     (when-not (= args-count (count args))
       (ex-info (str "Wrong number of arguments to " x) {}))
-    (apply emitter args)))
+    (apply emitter si args)))
 
 (let [n (volatile! -1)]
   (defn unique-label []
@@ -166,7 +166,7 @@
 ;;         L2: else   
 
 
-(defn emit-if [[_if test then else]]
+(defn emit-if [si [_if test then else]]
   ;; 0: create labels
   ;; 1: emit test
   ;; 2: do a compare
@@ -174,26 +174,26 @@
   ;; 4: emit code for then and else brances in correct places
   (let [altern-label (unique-label)
         end-label (unique-label)]
-    (emit-expr test)
+    (emit-expr si test)
     (println (format "\tcmp $%s, %%eax" bool-f))
     (println (format "\tje %s" altern-label))
-    (emit-expr then)
+    (emit-expr si then)
     (println (format "\tjmp %s" end-label))
     (println (format "%s:" altern-label))
-    (emit-expr else)
+    (emit-expr si else)
     (println (format "%s:" end-label))))
 
-(defn emit-expr [x]
+(defn emit-expr [si x]
   (cond
     (immediate? x)
     (emit-immediate x)
 
     (and (list? x)
          (contains? prim-call (first x)))
-    (emit-prim-call (first x) (rest x))
+    (emit-prim-call si (first x) (rest x))
 
     (if? x)
-    (emit-if x)))
+    (emit-if si x)))
 
 (defn emit-function-header [function-header]
   (println "\t.text")
@@ -204,7 +204,8 @@
   (let [asm
         (with-out-str
           (emit-function-header "scheme_entry")
-          (emit-expr program)
+          (println "\tmov %rdi, %rsp")
+          (emit-expr -4 program)
           (println "\tret"))]
     (spit "output.s" asm)))
 
