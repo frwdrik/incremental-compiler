@@ -204,8 +204,10 @@
   (let [asm
         (with-out-str
           (emit-function-header "scheme_entry")
+          (println "\tmov %rsp, %rcx")
           (println "\tmov %rdi, %rsp")
           (emit-expr -4 program)
+          (println "\tmov %rcx, %rsp")
           (println "\tret"))]
     (spit "output.s" asm)))
 
