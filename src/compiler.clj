@@ -139,8 +139,8 @@
     (apply emitter args)))
 
 (let [n (volatile! -1)]
- (defn unique-label []
-   (format "L.%s" (vswap! n inc))))
+  (defn unique-label []
+    (format "L.%s" (vswap! n inc))))
 
 (defn if? [x]
   (and (seq? x)
