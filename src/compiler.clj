@@ -111,6 +111,18 @@
   (println "\tsar $6, %eax")
 )
 
+(defn fx+ [si x y]
+  (emit-expr si x)
+  (println (format "\tmovl %%eax, %s(%%rsp)" si))
+  (emit-expr (- si 4) y)
+  (println (format "\taddl %s(%%rsp), %%eax" si)))
+
+(defn fx- [si x y]
+  (emit-expr si y)
+  (println (format "\tmovl %%eax, %s(%%rsp)" si))
+  (emit-expr (- si 4) x)
+  (println (format "\tsubl %s(%%rsp), %%eax" si)))
+
 (defn emit-immediate [x]
   (println (format "\tmovl $%d, %%eax" (immediate-rep x))))
 
@@ -130,7 +142,11 @@
    'fixnum->char {:args-count 1
                   :emitter fixnum->char}
    'char->fixnum {:args-count 1
-                  :emitter char->fixnum }})
+                  :emitter char->fixnum }
+   'fx+ {:args-count 2
+         :emitter fx+}
+   'fx- {:args-count 2
+         :emitter fx-}})
 
 (defn emit-prim-call [si x args]
   (let [{:keys [args-count emitter]} (prim-call x)]
@@ -270,6 +286,14 @@
   (is (= "true\n" (compile-and-run '(if (bool? false) true false))))
   (is (= "5\n" (compile-and-run '(if false 3 5))))
   (is (= "3\n" (compile-and-run '(if true 3 5)))))
+
+(deftest binary-prim-call-test
+  (is (= "5\n" (compile-and-run '(fx+ 2 3))))
+  (is (= "10\n" (compile-and-run '(fx+ 2 (fx+ 3 5)))))
+  (is (= "2\n" (compile-and-run '(fx- 5 3))))
+  (is (= "-2\n" (compile-and-run '(fx- 3 5))))
+  (is (= "12\n" (compile-and-run '(fx- 10 (fx- 3 5)))))
+  (is (= "2\n" (compile-and-run '(fx- 10 (fx+ 3 5))))))
 
 ;; First, run the Clojure compiler
 (compile-and-run true)
