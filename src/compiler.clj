@@ -54,16 +54,16 @@
 
 (declare emit-expr)
 
-(defn fxadd1 [si x]
-  (emit-expr si x)
+(defn fxadd1 [si env x]
+  (emit-expr si env x)
   (println (format "\taddl $%s, %%eax" (immediate-rep 1))))
 
-(defn fxsub1 [si x]
-  (emit-expr si x)
+(defn fxsub1 [si env x]
+  (emit-expr si env x)
   (println (format "\tsubl $%s, %%eax" (immediate-rep 1))))
 
-(defn fixnum? [si x]
-  (emit-expr si x)
+(defn fixnum? [si env x]
+  (emit-expr si env x)
   (println (format "\tand $%s, %%al" fxmask))
   (println (format "\tcmp $%s, %%al" fxtag))
   (println "\tsete %al")
@@ -74,8 +74,8 @@
 ;;   Unable to resolve symbol: emit-expr in this context
 ;;   
 
-(defn bool? [si x]
-  (emit-expr si x)
+(defn bool? [si env x]
+  (emit-expr si env x)
   (println (format "\tand $%s, %%al" objectmask))
   (println (format "\tcmp $%s, %%al" booltag))
   (println "\tsete %al")
@@ -83,8 +83,8 @@
   (println (format "\tsal $%s, %%al" bool-bit))
   (println (format "\tor $%s, %%al" bool-f)))
 
-(defn character? [si x]
-  (emit-expr si x)
+(defn character? [si env x]
+  (emit-expr si env x)
   (println (format "\tand $%s, %%al" objectmask))
   (println (format "\tcmp $%s, %%al" chartag))
   (println "\tsete %al")
@@ -92,8 +92,8 @@
   (println (format "\tsal $%s, %%al" bool-bit))
   (println (format "\tor $%s, %%al" bool-f)))
 
-(defn null? [si x]
-  (emit-expr si x)
+(defn null? [si env x]
+  (emit-expr si env x)
   (println (format "\tand $%s, %%al" objectmask))
   (println (format "\tcmp $%s, %%al" niltag))
   (println "\tsete %al")
@@ -101,26 +101,26 @@
   (println (format "\tsal $%s, %%al" bool-bit))
   (println (format "\tor $%s, %%al" bool-f)))
 
-(defn fixnum->char [si x]
-  (emit-expr si x)
+(defn fixnum->char [si env x]
+  (emit-expr si env x)
   (println "\tsal $6, %eax")
   (println (format "\tor $%s, %%eax" chartag)))
 
-(defn char->fixnum [si x]
-  (emit-expr si x)
+(defn char->fixnum [si env x]
+  (emit-expr si env x)
   (println "\tsar $6, %eax")
 )
 
-(defn fx+ [si x y]
-  (emit-expr si x)
+(defn fx+ [si env x y]
+  (emit-expr si env x)
   (println (format "\tmovl %%eax, %s(%%rsp)" si))
-  (emit-expr (- si 4) y)
+  (emit-expr (- si 4) env y)
   (println (format "\taddl %s(%%rsp), %%eax" si)))
 
-(defn fx- [si x y]
-  (emit-expr si y)
+(defn fx- [si env x y]
+  (emit-expr si env y)
   (println (format "\tmovl %%eax, %s(%%rsp)" si))
-  (emit-expr (- si 4) x)
+  (emit-expr (- si 4) env x)
   (println (format "\tsubl %s(%%rsp), %%eax" si)))
 
 (defn emit-immediate [x]
@@ -148,11 +148,11 @@
    'fx- {:args-count 2
          :emitter fx-}})
 
-(defn emit-prim-call [si x args]
+(defn emit-prim-call [si env x args]
   (let [{:keys [args-count emitter]} (prim-call x)]
     (when-not (= args-count (count args))
       (ex-info (str "Wrong number of arguments to " x) {}))
-    (apply emitter si args)))
+    (apply emitter si env args)))
 
 (let [n (volatile! -1)]
   (defn unique-label []
@@ -182,7 +182,7 @@
 ;;         L2: else   
 
 
-(defn emit-if [si [_if test then else]]
+(defn emit-if [si env [_if test then else]]
   ;; 0: create labels
   ;; 1: emit test
   ;; 2: do a compare
@@ -190,31 +190,33 @@
   ;; 4: emit code for then and else brances in correct places
   (let [altern-label (unique-label)
         end-label (unique-label)]
-    (emit-expr si test)
+    (emit-expr si env test)
     (println (format "\tcmp $%s, %%eax" bool-f))
     (println (format "\tje %s" altern-label))
-    (emit-expr si then)
+    (emit-expr si env then)
     (println (format "\tjmp %s" end-label))
     (println (format "%s:" altern-label))
-    (emit-expr si else)
+    (emit-expr si env else)
     (println (format "%s:" end-label))))
 
-(defn emit-expr [si x]
+(defn emit-expr [si env x]
   (cond
     (immediate? x)
     (emit-immediate x)
 
     (and (list? x)
          (contains? prim-call (first x)))
-    (emit-prim-call si (first x) (rest x))
+    (emit-prim-call si env (first x) (rest x))
 
     (if? x)
-    (emit-if si x)))
+    (emit-if si env x)))
 
 (defn emit-function-header [function-header]
   (println "\t.text")
   (println (str "\t.globl " function-header))
   (println (str function-header ":")))
+
+(def empty-env {})
 
 (defn emit-program [program]
   (let [asm
@@ -222,7 +224,7 @@
           (emit-function-header "scheme_entry")
           (println "\tmov %rsp, %rcx")
           (println "\tmov %rdi, %rsp")
-          (emit-expr -4 program)
+          (emit-expr -4 empty-env program)
           (println "\tmov %rcx, %rsp")
           (println "\tret"))]
     (spit "output.s" asm)))
