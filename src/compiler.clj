@@ -203,7 +203,7 @@
   (and (seq? x)
        (= 'let (first x))))
 
-(defn emit-let [si env x]
+(defn emit-let [si env [_let bindings & body]]
   ;; Initialize
   ;;   si <- si
   ;;   env <- env
@@ -213,8 +213,17 @@
   ;;   3. env <- (assoc env var si)
   ;;   4. si <- si-4
   ;; Emit body using si and env
-  
-  )
+  (loop [si si
+         env env
+         bindings bindings]
+    (if (empty? bindings)
+      (emit-expr si env (cons 'do body))
+      (do
+        (emit-expr si env (second bindings))
+        (println (format "\tmov %%eax, %s(%%rsp)" si))
+        (recur (- si 4)
+               (assoc env (first bindings) si)
+               (drop 2 bindings))))))
 
 '(let [x 1]
    x)
