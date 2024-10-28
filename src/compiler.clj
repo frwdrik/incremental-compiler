@@ -238,6 +238,12 @@
 
 ;; mov $8, %eax
 
+(defn do? [x]
+  (and (seq? x)
+       (= 'do (first x))))
+
+(defn emit-do [si env [_do body]]
+  (mapv #(emit-expr si env %) body))
 
 (defn emit-expr [si env x]
   (cond
@@ -252,7 +258,10 @@
     (emit-if si env x)
 
     (let? x)
-    (emit-let si env x)))
+    (emit-let si env x)
+    
+    (do? x)
+    (emit-do si env x)))
 
 (defn emit-function-header [function-header]
   (println "\t.text")
@@ -342,6 +351,10 @@
 
 (deftest let-expr
   (is (= "1\n" (compile-and-run '(let [x 1] x)))))
+
+(deftest do-expr
+  (is (= "1\n" (compile-and-run '(do 1)))))
+
 
 ;; First, run the Clojure compiler
 (compile-and-run true)
