@@ -204,7 +204,31 @@
        (= 'let (first x))))
 
 (defn emit-let [si env x]
+  ;; Initialize
+  ;;   si <- si
+  ;;   env <- env
+  ;; While there are bindings (var, expr):
+  ;;   1. emit expr
+  ;;   2. move expr into stack at stack index
+  ;;   3. env <- (assoc env var si)
+  ;;   4. si <- si-4
+  ;; Emit body using si and env
+  
   )
+
+'(let [x 1]
+   x)
+
+;; x is a local variable.
+;; We are storing local variables on the stack.
+;; Hence, x needs to be assigned a stack index.
+;; 
+;; Our compiler needs to keep track of all stack index assignments,
+;; because when we evaluate the body of a let, we might encounter variable names,
+;; and those should be compiled into mov's from the corresponding stack index.
+
+;; mov $8, %eax
+
 
 (defn emit-expr [si env x]
   (cond
