@@ -218,6 +218,11 @@
          bindings bindings]
     (if (empty? bindings)
       (emit-expr si env (cons 'do body))
+      ;; body = ((println 1) 3)
+      ;; (cons 'do body) = (do (println 1) 3)
+      ;; (let [x 1]
+      ;;   (println 1)
+      ;;   3)
       (do
         (emit-expr si env (second bindings))
         (println (format "\tmov %%eax, %s(%%rsp)" si))
@@ -242,7 +247,7 @@
   (and (seq? x)
        (= 'do (first x))))
 
-(defn emit-do [si env [_do body]]
+(defn emit-do [si env [_do & body]]
   (mapv #(emit-expr si env %) body))
 
 (defn emit-expr [si env x]
