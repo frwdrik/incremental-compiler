@@ -199,6 +199,13 @@
     (emit-expr si env else)
     (println (format "%s:" end-label))))
 
+(defn let-expr? [x]
+  (and (seq? x)
+       (= 'let (first x))))
+
+(defn emit-let [si env x]
+  )
+
 (defn emit-expr [si env x]
   (cond
     (immediate? x)
@@ -209,7 +216,10 @@
     (emit-prim-call si env (first x) (rest x))
 
     (if? x)
-    (emit-if si env x)))
+    (emit-if si env x)
+
+    (let-expr? x)
+    (emit-let si env x)))
 
 (defn emit-function-header [function-header]
   (println "\t.text")
@@ -296,6 +306,9 @@
   (is (= "-2\n" (compile-and-run '(fx- 3 5))))
   (is (= "12\n" (compile-and-run '(fx- 10 (fx- 3 5)))))
   (is (= "2\n" (compile-and-run '(fx- 10 (fx+ 3 5))))))
+
+(deftest let-expr
+  (is (= "1\n" (compile-and-run '(let [x 1] x)))))
 
 ;; First, run the Clojure compiler
 (compile-and-run true)
