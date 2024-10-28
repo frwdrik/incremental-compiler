@@ -361,6 +361,12 @@
   (is (= "1\n" (compile-and-run '(do 1)))))
 
 
+(comment
+  ;; FIXME This returns 0 and should return -5
+  (compile-and-run '(let [x 1] (fx+ x 3) (fx- x 6)))
+  )
+
+
 ;; First, run the Clojure compiler
 (compile-and-run true)
 ;; Then, run the makefile
