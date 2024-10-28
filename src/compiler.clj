@@ -199,7 +199,7 @@
     (emit-expr si env else)
     (println (format "%s:" end-label))))
 
-(defn let-expr? [x]
+(defn let? [x]
   (and (seq? x)
        (= 'let (first x))))
 
@@ -251,7 +251,7 @@
     (if? x)
     (emit-if si env x)
 
-    (let-expr? x)
+    (let? x)
     (emit-let si env x)))
 
 (defn emit-function-header [function-header]
