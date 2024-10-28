@@ -250,6 +250,14 @@
 (defn emit-do [si env [_do & body]]
   (mapv #(emit-expr si env %) body))
 
+(defn variable? [x]
+  (symbol? x))
+
+(defn emit-variable [env var]
+  (if-let [si (get env var)]
+    (println (format "\tmov %s(%%rsp), %%eax" si))
+    (throw (ex-info "Unknown local" {:local var :env env}))))
+
 (defn emit-expr [si env x]
   (cond
     (immediate? x)
@@ -264,6 +272,9 @@
 
     (let? x)
     (emit-let si env x)
+    
+    (variable? x)
+    (emit-variable env x)
     
     (do? x)
     (emit-do si env x)))
@@ -364,6 +375,8 @@
 (comment
   ;; FIXME This returns 0 and should return -5
   (compile-and-run '(let [x 1] (fx+ x 3) (fx- x 6)))
+  (compile-and-run '(let [x 1] (fx- x 6)))
+  (compile-and-run '(let [x 1] (fx- y 6)))
   )
 
 
