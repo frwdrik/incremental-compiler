@@ -163,6 +163,10 @@
        (= 'if (first x))
        (= (count x) 4)))
 
+(defn letrec? [x]
+  (and (seq? x)
+       (= 'letrec (first x))))
+
 ;; 	.text
 ;; 	.globl	main
 ;; main:
@@ -230,8 +234,54 @@
                (assoc env (first bindings) si)
                (drop 2 bindings))))))
 
-'(let [x 1]
-   x)
+(defn emit-function-header [function-header]
+  (println "\t.text")
+  (println (str "\t.globl " function-header))
+  (println (str function-header ":")))
+
+(defn emit-ret []
+  (println "\tret"))
+
+(defn emit-scheme-entry [program env]
+  (emit-function-header "L_scheme_entry")
+  (emit-expr -4 env program)
+  (emit-ret))
+
+(app f)
+
+(defn emit-app [env si expr]
+  )
+
+;; | stack |  si |
+;; | ~~~~  | 0   |
+;; |       | -4  |
+;; 
+;;
+;;
+
+(defn emit-lambda [env label [_lambda args & body]]
+  (emit-function-header label)
+  (let [env (merge env
+                   (zipmap args (iterate #(- % 4) (- 4))))]
+    (emit-expr (* (inc (count args)) -4) env (cons 'do body))))
+
+(defn emit-letrec [[_letrec bindings & body]]
+  (let [lambdas (take-nth 2 (drop 1 bindings))
+        lvars (take-nth 2 bindings)
+        labels (repeatedly unique-label)
+        env (zipmap lvars labels)]
+    (mapv (partial emit-lambda env) labels lambdas)
+    (emit-scheme-entry (cons 'do body) env)))
+
+;; (emit-body 'x {x -4})
+;; 
+;; 
+
+
+
+
+;; '(let [x 1]
+;;    x)
 
 ;; x is a local variable.
 ;; We are storing local variables on the stack.
@@ -277,12 +327,10 @@
     (emit-variable env x)
     
     (do? x)
-    (emit-do si env x)))
+    (emit-do si env x)
 
-(defn emit-function-header [function-header]
-  (println "\t.text")
-  (println (str "\t.globl " function-header))
-  (println (str function-header ":")))
+    (letrec? x)
+    (emit-letrec x)))
 
 (def empty-env {})
 
@@ -292,9 +340,12 @@
           (emit-function-header "scheme_entry")
           (println "\tmov %rsp, %rcx")
           (println "\tmov %rdi, %rsp")
-          (emit-expr -4 empty-env program)
+          (println "\tcall L_scheme_entry")
           (println "\tmov %rcx, %rsp")
-          (println "\tret"))]
+          (println "\tret")
+          (if (letrec? program)
+            (emit-letrec program)
+            (emit-scheme-entry program empty-env)))]
     (spit "output.s" asm)))
 
 (defn compile-and-run [program]
@@ -365,6 +416,17 @@
   (is (= "12\n" (compile-and-run '(fx- 10 (fx- 3 5)))))
   (is (= "2\n" (compile-and-run '(fx- 10 (fx+ 3 5))))))
 
+(deftest letrec-test
+  (is (= "12\n" (compile-and-run '(letrec [] 12))))
+  (is (= "10\n" (compile-and-run '(letrec [] (let [x 5] (fx+ x x))))))
+  (is (= "7\n" (compile-and-run '(letrec [f (lambda () 5)] 7))))
+  (is (= "12\n" (compile-and-run '(letrec [f (lambda () 5)] (let [x 12] x)))))
+  (is (= "5\n" (compile-and-run '(letrec [f (lambda () 5)] (app f)))))
+  (is (= "5\n" (compile-and-run '(letrec [f (lambda () 5)] (let [x (app f)] x)))))
+  (is (= "11\n" (compile-and-run '(letrec [f (lambda () 5)] (fx+ (app f) 6)))))
+  (is (= "15\n" (compile-and-run '(letrec [f (lambda () 5)] (fx- 20 (app f))))))
+  (is (= "10\n" (compile-and-run '(letrec [f (lambda () 5)] (fx+ (app f) (app f)))))))
+
 (deftest let-expr
   (is (= "1\n" (compile-and-run '(let [x 1] x)))))
 
@@ -377,7 +439,7 @@
   (compile-and-run '(let [x 1] (fx+ x 3) (fx- x 6)))
   (compile-and-run '(let [x 1] (fx- x 6)))
   (compile-and-run '(let [x 1] (fx- y 6)))
-  )
+ )
 
 
 ;; First, run the Clojure compiler
