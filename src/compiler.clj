@@ -262,22 +262,21 @@
 
 (declare emit-expr)
 
-;; (app add1 5)
-(defn emit-app [si env [_app fn-name & args]]
-  (emit-adjust-stack (- si 8))
-  (doseq [arg (reverse args)]
-    (emit-expr si env arg)
-    (emit-push "%rax"))
-  (emit-adjust-stack (* 8 (inc (count args))))
-  (emit-call fn-name)
-  (emit-adjust-stack (- si)))
+(defn emit-stack-save [si]
+  (println (format "\tmov %%rax, %s(%%rsp)" si)))
 
-;; | stack |  si |
-;; | ~~~~  | 0   |
-;; |       | -4  |
-;; 
-;;
-;;
+(defn emit-app [si env [_app fn-name & args]]
+  ;; Start emitting args at `(- si 8)`, so as to leave room for "call"
+  ;; to push the return address at `si`.
+  (loop [[arg & rargs] (reverse args)
+         si (- si 8)]
+    (when arg
+      (emit-expr si env arg)
+      (emit-stack-save si)
+      (recur rargs (- si 8))))
+  (emit-adjust-stack (+ si 8))
+  (emit-call fn-name)
+  (emit-adjust-stack (- (+ si 8))))
 
 (defn emit-lambda [env label [_lambda args & body]]
   (emit-function-header label)
@@ -451,26 +450,32 @@
   (is (= "5\n" (compile-and-run '(letrec [f (lambda () 5)] (let [x (app f)] x)))))
   (is (= "11\n" (compile-and-run '(letrec [f (lambda () 5)] (fx+ (app f) 6)))))
   (is (= "15\n" (compile-and-run '(letrec [f (lambda () 5)] (fx- 20 (app f))))))
-  (is (= "10\n" (compile-and-run '(letrec [f (lambda () 5)] (fx+ (app f) (app f)))))))
+  (is (= "10\n" (compile-and-run '(letrec [f (lambda () 5)] (fx+ (app f) (app f))))))
+  (is (= "-9\n" (compile-and-run '(letrec [f (lambda (x) (fx- x 10))]
+                                          (let [x 1]
+                                            (app f x))))))
+  ;; Suggestion: Support mutually recursive functions
+  #_(is (= "-9\n"
+         (compile-and-run
+          '(letrec [f (lambda (x) (if (bool? x) 123 (app g false)))
+                    g (lambda (y) (app f y))]
+                   ;; This call should go like
+                   ;;   - (g 1)
+                   ;;   - (f 1)
+                   ;;   - (g false)
+                   ;;   - (f false) => done, return 123
+                   (app g 1)))))
+  )
 
 (deftest let-expr
-  (is (= "1\n" (compile-and-run '(let [x 1] x)))))
+  (is (= "1\n" (compile-and-run '(let [x 1] x))))
+  (is (= "-5\n" (compile-and-run '(let [x 1] (fx+ x 3) (fx- x 6)))))
+  (is (= "-5\n" (compile-and-run '(let [x 1] (fx- x 6))))))
 
 (deftest do-expr
   (is (= "1\n" (compile-and-run '(do 1)))))
 
-
-
-
-(comment
-  ;; FIXME This returns 0 and should return -5
-  (compile-and-run '(let [x 1] (fx+ x 3) (fx- x 6)))
-  (compile-and-run '(let [x 1] (fx- x 6)))
-  (compile-and-run '(let [x 1] (fx- y 6)))
- )
-
-
 ;; First, run the Clojure compiler
-(compile-and-run true)
+;;     (compile-and-run true)
 ;; Then, run the makefile
-;; $ make run
+;;     $ make run
