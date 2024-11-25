@@ -114,13 +114,13 @@
 (defn fx+ [si env x y]
   (emit-expr si env x)
   (println (format "\tmovl %%eax, %s(%%rsp)" si))
-  (emit-expr (- si 4) env y)
+  (emit-expr (- si 8) env y)
   (println (format "\taddl %s(%%rsp), %%eax" si)))
 
 (defn fx- [si env x y]
   (emit-expr si env y)
   (println (format "\tmovl %%eax, %s(%%rsp)" si))
-  (emit-expr (- si 4) env x)
+  (emit-expr (- si 8) env x)
   (println (format "\tsubl %s(%%rsp), %%eax" si)))
 
 (defn emit-immediate [x]
@@ -155,8 +155,8 @@
     (apply emitter si env args)))
 
 (let [n (volatile! -1)]
-  (defn unique-label []
-    (format "L.%s" (vswap! n inc))))
+  (defn unique-label [prefix]
+    (format "%s.%s" prefix (vswap! n inc))))
 
 (defn if? [x]
   (and (seq? x)
@@ -166,6 +166,10 @@
 (defn letrec? [x]
   (and (seq? x)
        (= 'letrec (first x))))
+
+(defn app? [x]
+  (and (seq? x)
+       (= 'app (first x))))
 
 ;; 	.text
 ;; 	.globl	main
@@ -192,8 +196,8 @@
   ;; 2: do a compare
   ;; 3: jump to right places based on compare
   ;; 4: emit code for then and else brances in correct places
-  (let [altern-label (unique-label)
-        end-label (unique-label)]
+  (let [altern-label (unique-label "altern")
+        end-label (unique-label "end")]
     (emit-expr si env test)
     (println (format "\tcmp $%s, %%eax" bool-f))
     (println (format "\tje %s" altern-label))
@@ -215,7 +219,7 @@
   ;;   1. emit expr
   ;;   2. move expr into stack at stack index
   ;;   3. env <- (assoc env var si)
-  ;;   4. si <- si-4
+  ;;   4. si <- si-8
   ;; Emit body using si and env
   (loop [si si
          env env
@@ -230,7 +234,7 @@
       (do
         (emit-expr si env (second bindings))
         (println (format "\tmov %%eax, %s(%%rsp)" si))
-        (recur (- si 4)
+        (recur (- si 8)
                (assoc env (first bindings) si)
                (drop 2 bindings))))))
 
@@ -244,13 +248,29 @@
 
 (defn emit-scheme-entry [program env]
   (emit-function-header "L_scheme_entry")
-  (emit-expr -4 env program)
+  (emit-expr -8 env program)
   (emit-ret))
 
-(app f)
+(defn emit-push [x]
+  (println (format "\tpush %s" x)))
 
-(defn emit-app [env si expr]
-  )
+(defn emit-call [label]
+  (println (format "\tcall %s" label)))
+
+(defn emit-adjust-stack [offset]
+  (println (format "\tadd $%d, %%rsp" offset)))
+
+(declare emit-expr)
+
+;; (app add1 5)
+(defn emit-app [si env [_app fn-name & args]]
+  (emit-adjust-stack (- si 8))
+  (doseq [arg (reverse args)]
+    (emit-expr si env arg)
+    (emit-push "%rax"))
+  (emit-adjust-stack (* 8 (inc (count args))))
+  (emit-call fn-name)
+  (emit-adjust-stack (- si)))
 
 ;; | stack |  si |
 ;; | ~~~~  | 0   |
@@ -262,23 +282,17 @@
 (defn emit-lambda [env label [_lambda args & body]]
   (emit-function-header label)
   (let [env (merge env
-                   (zipmap args (iterate #(- % 4) (- 4))))]
-    (emit-expr (* (inc (count args)) -4) env (cons 'do body))))
+                   (zipmap args (iterate #(- % 8) (- 8))))]
+    (emit-expr (* (inc (count args)) -8) env (cons 'do body))
+    (emit-ret)))
 
 (defn emit-letrec [[_letrec bindings & body]]
   (let [lambdas (take-nth 2 (drop 1 bindings))
         lvars (take-nth 2 bindings)
-        labels (repeatedly unique-label)
+        labels lvars
         env (zipmap lvars labels)]
     (mapv (partial emit-lambda env) labels lambdas)
     (emit-scheme-entry (cons 'do body) env)))
-
-;; (emit-body 'x {x -4})
-;; 
-;; 
-
-
-
 
 ;; '(let [x 1]
 ;;    x)
@@ -290,8 +304,6 @@
 ;; Our compiler needs to keep track of all stack index assignments,
 ;; because when we evaluate the body of a let, we might encounter variable names,
 ;; and those should be compiled into mov's from the corresponding stack index.
-
-;; mov $8, %eax
 
 (defn do? [x]
   (and (seq? x)
@@ -330,7 +342,10 @@
     (emit-do si env x)
 
     (letrec? x)
-    (emit-letrec x)))
+    (emit-letrec x)
+
+    (app? x)
+    (emit-app si env x)))
 
 (def empty-env {})
 
@@ -416,6 +431,17 @@
   (is (= "12\n" (compile-and-run '(fx- 10 (fx- 3 5)))))
   (is (= "2\n" (compile-and-run '(fx- 10 (fx+ 3 5))))))
 
+;; In our "scheme" language, we can define and apply our own functions
+;; like this:
+;; (letrec [add-1 (lambda (x)
+;;                        (fx+ 1 x))]
+;;         ;; body
+;;         (app add-1 3))
+
+;; The similar code in JS would look like:
+;; { const add1 = (x) => x+1;
+;;   return add1(3); }
+
 (deftest letrec-test
   (is (= "12\n" (compile-and-run '(letrec [] 12))))
   (is (= "10\n" (compile-and-run '(letrec [] (let [x 5] (fx+ x x))))))
@@ -432,6 +458,8 @@
 
 (deftest do-expr
   (is (= "1\n" (compile-and-run '(do 1)))))
+
+
 
 
 (comment
