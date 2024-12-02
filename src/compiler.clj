@@ -351,7 +351,7 @@
       (recur rargs (- si 8))))
   ;; Offset = (- (rsp - 8) si)
   ;; For each arg, move arg by offset
-  (let [offset (- (- si) 8)]
+  (let [offset (- si)]
     (loop [[arg & rest] args
            si (- si 8)]
       (when arg
@@ -525,7 +525,12 @@
   (is (= "#\\a\n" (compile-and-run '(fixnum->char 97))))
   (is (= "#\\A\n" (compile-and-run '(fixnum->char 65))))
   
-  (is (= "65\n" (compile-and-run '(char->fixnum (fixnum->char 65))))))
+  (is (= "65\n" (compile-and-run '(char->fixnum (fixnum->char 65)))))
+
+  (is (= "true\n" (compile-and-run '(fxzero? 0))))
+  (is (= "false\n" (compile-and-run '(fxzero? 1))))
+  (is (= "false\n" (compile-and-run '(fxzero? (fx+ 1 0)))))
+  (is (= "true\n" (compile-and-run '(fxzero? (fx- 99 (fx+ 90 9)))))))
 
 (deftest if-expr
   (is (= "true\n" (compile-and-run '(if false false true))))
@@ -587,12 +592,11 @@
                                                          true
                                                          false))]
                                             (app f 0)))))
-  (is (= "true\n" (compile-and-run '(letrec [f (lambda (x)
-                                                       (if (fxzero? x)
-                                                         true
-                                                         (app f (fx- x 1))))]
-                                            (app f 3))))))
-
+  (is (= "9\n" (compile-and-run '(letrec [f (lambda (x)
+                                                    (if (fxzero? x)
+                                                      9
+                                                      (app f (fx- x 1))))]
+                                         (app f 3))))))
 (deftest let-expr
   (is (= "1\n" (compile-and-run '(let [x 1] x))))
   (is (= "-5\n" (compile-and-run '(let [x 1] (fx+ x 3) (fx- x 6)))))
