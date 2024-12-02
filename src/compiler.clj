@@ -582,12 +582,17 @@
                    (app g 1)))))
   )
 
-(deftest emit-tail-expr
+(deftest emit-tail-expr-test
   (is (= "true\n" (compile-and-run '(letrec [f (lambda (x)
                                                        (if (fxzero? x)
                                                          true
                                                          false))]
-                                            (app f 0))))))
+                                            (app f 0)))))
+  (is (= "true\n" (compile-and-run '(letrec [f (lambda (x)
+                                                       (if (fxzero? x)
+                                                         true
+                                                         (app f (fx- x 1))))]
+                                            (app f 3))))))
 
 (deftest let-expr
   (is (= "1\n" (compile-and-run '(let [x 1] x))))
