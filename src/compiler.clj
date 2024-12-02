@@ -125,7 +125,12 @@
   (println (format "\tsubl %s(%%rsp), %%eax" si)))
 
 (defn fxzero? [si env x]
-  :todo)
+  (emit-expr si env x)
+  (println "\ttest %rax, %rax")
+  (println "\tsete %al")
+  (println "\tmovzbl %al, %eax")
+  (println (format "\tsal $%s, %%al" bool-bit))
+  (println (format "\tor $%s, %%al" bool-f)))
 
 (defn emit-immediate [x]
   (println (format "\tmovl $%d, %%eax" (immediate-rep x))))
@@ -325,7 +330,7 @@
 
   ;; Start emitting args at `(- si 8)`, so as to leave room for "call"
   ;; to push the return address at `si`.
-  (loop [[arg & rargs] (reverse args)
+  (loop [[arg & rargs] args
          si (- si 8)]
     (when arg
       (emit-expr si env arg)
@@ -338,7 +343,7 @@
 (defn emit-tail-app [si env [_app fn-name & args]]
   ;; Start emitting args at `(- si 8)`, so as to leave room for "call"
   ;; to push the return address at `si`.
-  (loop [[arg & rargs] (reverse args)
+  (loop [[arg & rargs] args
          si (- si 8)]
     (when arg
       (emit-expr si env arg)
@@ -562,6 +567,8 @@
   (is (= "-9\n" (compile-and-run '(letrec [f (lambda (x) (fx- x 10))]
                                           (let [x 1]
                                             (app f x))))))
+  (is (= "-1\n" (compile-and-run '(letrec [f (lambda (x y) (fx- x y))]
+                                          (app f 2 3)))))
   ;; Suggestion: Support mutually recursive functions
   #_(is (= "-9\n"
          (compile-and-run
@@ -576,7 +583,11 @@
   )
 
 (deftest emit-tail-expr
-  (is (= ? (compile-and-run '(letrec [f (lambda (x) ())] )))))
+  (is (= "true\n" (compile-and-run '(letrec [f (lambda (x)
+                                                       (if (fxzero? x)
+                                                         true
+                                                         false))]
+                                            (app f 0))))))
 
 (deftest let-expr
   (is (= "1\n" (compile-and-run '(let [x 1] x))))
