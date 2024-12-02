@@ -53,6 +53,7 @@
       (nil? x)))
 
 (declare emit-expr)
+(declare emit-tail-expr)
 
 (defn fxadd1 [si env x]
   (emit-expr si env x)
@@ -123,6 +124,9 @@
   (emit-expr (- si 8) env x)
   (println (format "\tsubl %s(%%rsp), %%eax" si)))
 
+(defn fxzero? [si env x]
+  :todo)
+
 (defn emit-immediate [x]
   (println (format "\tmovl $%d, %%eax" (immediate-rep x))))
 
@@ -146,7 +150,9 @@
    'fx+ {:args-count 2
          :emitter fx+}
    'fx- {:args-count 2
-         :emitter fx-}})
+         :emitter fx-}
+   'fxzero? {:args-count 1
+             :emitter fxzero?}})
 
 (defn emit-prim-call [si env x args]
   (let [{:keys [args-count emitter]} (prim-call x)]
@@ -207,6 +213,18 @@
     (emit-expr si env else)
     (println (format "%s:" end-label))))
 
+(defn emit-tail-if [si env [_if test then else]]
+  (let [altern-label (unique-label "altern")
+        end-label (unique-label "end")]
+    (emit-expr si env test)
+    (println (format "\tcmp $%s, %%eax" bool-f))
+    (println (format "\tje %s" altern-label))
+    (emit-tail-expr si env then)
+    (println (format "\tjmp %s" end-label))
+    (println (format "%s:" altern-label))
+    (emit-tail-expr si env else)
+    (println (format "%s:" end-label))))
+
 (defn let? [x]
   (and (seq? x)
        (= 'let (first x))))
@@ -231,6 +249,19 @@
       ;; (let [x 1]
       ;;   (println 1)
       ;;   3)
+      (do
+        (emit-expr si env (second bindings))
+        (println (format "\tmov %%eax, %s(%%rsp)" si))
+        (recur (- si 8)
+               (assoc env (first bindings) si)
+               (drop 2 bindings))))))
+
+(defn emit-tail-let [si env [_let bindings & body]]
+  (loop [si si
+         env env
+         bindings bindings]
+    (if (empty? bindings)
+      (emit-tail-expr si env (cons 'do body))
       (do
         (emit-expr si env (second bindings))
         (println (format "\tmov %%eax, %s(%%rsp)" si))
@@ -265,8 +296,8 @@
 (defn emit-stack-save [si]
   (println (format "\tmov %%rax, %s(%%rsp)" si)))
 
-(letrec [f (lambda ...)]
-        (app f arg1 arg2 arg3))
+(defn emit-stack-load [si]
+  (println (format "\tmov %s(%%rsp), %%rax" si)))
 
 (defn emit-app [si env [_app fn-name & args]]
   ;; si = -100  (random numbers)
@@ -304,6 +335,26 @@
   (emit-call fn-name)          ;; 1. decrement rsp to 900, 2. save return address at memory pointed to by rsp
   (emit-adjust-stack (- (+ si 8))))
 
+(defn emit-tail-app [si env [_app fn-name & args]]
+  ;; Start emitting args at `(- si 8)`, so as to leave room for "call"
+  ;; to push the return address at `si`.
+  (loop [[arg & rargs] (reverse args)
+         si (- si 8)]
+    (when arg
+      (emit-expr si env arg)
+      (emit-stack-save si)
+      (recur rargs (- si 8))))
+  ;; Offset = (- (rsp - 8) si)
+  ;; For each arg, move arg by offset
+  (let [offset (- (- si) 8)]
+    (loop [[arg & rest] args
+           si (- si 8)]
+      (when arg
+        (emit-stack-load si)
+        (emit-stack-save (+ si offset))
+        (recur rest (- si 8)))))
+  (println (str "\tjmp " fn-name)))
+
 (defn emit-lambda [env label [_lambda args & body]]
   (emit-function-header label)
   (let [env (merge env
@@ -336,6 +387,10 @@
 
 (defn emit-do [si env [_do & body]]
   (mapv #(emit-expr si env %) body))
+
+(defn emit-tail-do [si env [_do & body]]
+  (mapv #(emit-expr si env %) (butlast body))
+  (emit-tail-expr si env (last body)))
 
 (defn variable? [x]
   (symbol? x))
@@ -371,6 +426,33 @@
 
     (app? x)
     (emit-app si env x)))
+
+(defn emit-tail-expr [si env x]
+  (cond
+    (immediate? x)
+    (do (emit-immediate x)
+        (emit-ret))
+
+    (and (list? x)
+         (contains? prim-call (first x)))
+    (do (emit-prim-call si env (first x) (rest x))
+        (emit-ret))
+
+    (if? x)
+    (emit-tail-if si env x)
+
+    (let? x)
+    (emit-tail-let si env x)
+
+    (variable? x)
+    (do (emit-variable env x)
+        (emit-ret))
+
+    (do? x)
+    (emit-tail-do si env x)
+
+    (app? x)
+    (emit-tail-app si env x)))
 
 (def empty-env {})
 
@@ -492,6 +574,9 @@
                    ;;   - (f false) => done, return 123
                    (app g 1)))))
   )
+
+(deftest emit-tail-expr
+  (is (= ? (compile-and-run '(letrec [f (lambda (x) ())] )))))
 
 (deftest let-expr
   (is (= "1\n" (compile-and-run '(let [x 1] x))))
