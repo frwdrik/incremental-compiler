@@ -265,7 +265,33 @@
 (defn emit-stack-save [si]
   (println (format "\tmov %%rax, %s(%%rsp)" si)))
 
+(letrec [f (lambda ...)]
+        (app f arg1 arg2 arg3))
+
 (defn emit-app [si env [_app fn-name & args]]
+  ;; si = -100  (random numbers)
+  ;; rsp = 1000
+  ;;
+  ;; STACK FRAME BEFORE CALL
+  ;; stack address        stack content
+  ;; 992                  ~~~~~
+  ;; 1000 (rsp)           ~~~~~
+  ;; ...
+  ;;
+  ;; 900                  <free space for emit-app>
+  ;; x (=900)             return address
+  ;; 892                  arg3
+  ;; 884                  arg2
+  ;;
+  ;;
+  ;; STACK FRAME DIRECTLY AFTER CALL
+  ;; stack address        stack content
+  ;; 900 (rsp)            return-address
+  ;; 900-8                  arg3
+  ;; 900-16                 arg2
+  ;; ...                  ...
+  ;;
+
   ;; Start emitting args at `(- si 8)`, so as to leave room for "call"
   ;; to push the return address at `si`.
   (loop [[arg & rargs] (reverse args)
@@ -274,8 +300,8 @@
       (emit-expr si env arg)
       (emit-stack-save si)
       (recur rargs (- si 8))))
-  (emit-adjust-stack (+ si 8))
-  (emit-call fn-name)
+  (emit-adjust-stack (+ si 8)) ;; rsp = 908
+  (emit-call fn-name)          ;; 1. decrement rsp to 900, 2. save return address at memory pointed to by rsp
   (emit-adjust-stack (- (+ si 8))))
 
 (defn emit-lambda [env label [_lambda args & body]]
