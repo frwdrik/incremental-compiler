@@ -247,7 +247,7 @@
   (println "\tret"))
 
 (defn emit-scheme-entry [program env]
-  (emit-function-header "L_scheme_entry")
+  (emit-function-header "__scheme_entry")
   (emit-expr -8 env program)
   (emit-ret))
 
@@ -354,7 +354,7 @@
           (emit-function-header "scheme_entry")
           (println "\tmov %rsp, %rcx")
           (println "\tmov %rdi, %rsp")
-          (println "\tcall L_scheme_entry")
+          (println "\tcall __scheme_entry")
           (println "\tmov %rcx, %rsp")
           (println "\tret")
           (if (letrec? program)
