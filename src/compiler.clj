@@ -284,7 +284,7 @@
 
 (defn emit-scheme-entry [program env]
   (emit-function-header "__scheme_entry")
-  (emit-expr -8 env program)
+  (emit-tail-expr -8 env program)
   (emit-ret))
 
 (defn emit-push [x]
@@ -364,7 +364,7 @@
   (emit-function-header label)
   (let [env (merge env
                    (zipmap args (iterate #(- % 8) (- 8))))]
-    (emit-expr (* (inc (count args)) -8) env (cons 'do body))
+    (emit-tail-expr (* (inc (count args)) -8) env (cons 'do body))
     (emit-ret)))
 
 (defn emit-letrec [[_letrec bindings & body]]
