@@ -364,8 +364,7 @@
   (emit-function-header label)
   (let [env (merge env
                    (zipmap args (iterate #(- % 8) (- 8))))]
-    (emit-tail-expr (* (inc (count args)) -8) env (cons 'do body))
-    (emit-ret)))
+    (emit-tail-expr (* (inc (count args)) -8) env (cons 'do body))))
 
 (defn emit-letrec [[_letrec bindings & body]]
   (let [lambdas (take-nth 2 (drop 1 bindings))
