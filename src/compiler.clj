@@ -67,8 +67,8 @@
   ;; rbp contains the pointer to the next available byte in memory
   ;; At the end of the function, the heap pointer will be incremented by size
   ;; Will return the starting address in %rax
-  (println "\tmov %rbp %rax")
-  (println (format "\taddl $%s, %%rbp" size)))
+  (println "\tmov %rbp, %rax")
+  (println (format "\tadd $%s, %%rbp" size)))
 
 (defn emit-cons [si env x y]
   (emit-expr si env x) ;; emit x
@@ -81,6 +81,23 @@
   (println (format "\tmov %s(%%rsp), %%rdx" (- si 8)))         ;; move y into rdx register
   (println "\tmov %rdx, 8(%rax)")                              ;; move rdx register into allocated memory
   (println (format "\tor $%s, %%al" pairtag)))                 ;; tag pointer
+
+(defn emit-car [si env x]
+  ;; Emit x (the pair)
+  ;; Subtract pair tag
+  ;; (8b (first), 8b (second))
+  ;; Removing tag from address of cons cell to get address of first element
+  (emit-expr si env x)
+  (println "\tmov -1(%rax), %rax"))
+
+(defn emit-cdr [si env x]
+  ;; Emit x (the pair)
+  ;; Subtract pair tag
+  ;; (8b (first), 8b (second))
+  ;; Removing tag from address of cons cell to get address of first element,
+  ;; Move 8b up to second element
+  (emit-expr si env x)
+  (println "\tmov 7(%rax), %rax"))
 
 (defn fxadd1 [si env x]
   (emit-expr si env x)
@@ -184,7 +201,13 @@
    'fx- {:args-count 2
          :emitter fx-}
    'fxzero? {:args-count 1
-             :emitter fxzero?}})
+             :emitter fxzero?}
+   'cons {:args-count 2
+         :emitter emit-cons}
+   'cdr {:args-count 1
+         :emitter emit-cdr}
+   'car {:args-count 1
+         :emitter emit-car}})
 
 (defn emit-prim-call [si env x args]
   (let [{:keys [args-count emitter]} (prim-call x)]
