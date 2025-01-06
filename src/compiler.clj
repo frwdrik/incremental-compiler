@@ -28,6 +28,14 @@
 
 (def niltag 2r111111)
 
+(def pairtag 2r001)
+
+(defn emit-stack-save [si]
+  (println (format "\tmov %%rax, %s(%%rsp)" si)))
+
+(defn emit-stack-load [si]
+  (println (format "\tmov %s(%%rsp), %%rax" si)))
+
 (defn immediate-rep [x]
   (cond
     (integer? x)
@@ -54,6 +62,25 @@
 
 (declare emit-expr)
 (declare emit-tail-expr)
+
+(defn emit-heap-alloc [size]
+  ;; rbp contains the pointer to the next available byte in memory
+  ;; At the end of the function, the heap pointer will be incremented by size
+  ;; Will return the starting address in %rax
+  (println "\tmov %rbp %rax")
+  (println (format "\taddl $%s, %%rbp" size)))
+
+(defn emit-cons [si env x y]
+  (emit-expr si env x) ;; emit x
+  (emit-stack-save si)
+  (emit-expr (- si 8) env y) ;; emit y
+  (emit-stack-save (- si 8))
+  (emit-heap-alloc 16)
+  (println (format "\tmov %s(%%rsp), %%rdx" si))               ;; move x into rdx register
+  (println "\tmov %rdx, (%rax)")                               ;; move rdx register into allocated memory
+  (println (format "\tmov %s(%%rsp), %%rdx" (- si 8)))         ;; move y into rdx register
+  (println "\tmov %rdx, 8(%rax)")                              ;; move rdx register into allocated memory
+  (println (format "\tor $%s, %%al" pairtag)))                 ;; tag pointer
 
 (defn fxadd1 [si env x]
   (emit-expr si env x)
@@ -297,12 +324,6 @@
   (println (format "\tadd $%d, %%rsp" offset)))
 
 (declare emit-expr)
-
-(defn emit-stack-save [si]
-  (println (format "\tmov %%rax, %s(%%rsp)" si)))
-
-(defn emit-stack-load [si]
-  (println (format "\tmov %s(%%rsp), %%rax" si)))
 
 (defn emit-app [si env [_app fn-name & args]]
   ;; si = -100  (random numbers)
@@ -604,6 +625,10 @@
 
 (deftest do-expr
   (is (= "1\n" (compile-and-run '(do 1)))))
+
+(deftest cons-expr
+  (is (= 1 (compile-and-run '(car (cons 1 2)))))
+  (is (= 2 (compile-and-run '(cdr (cons 1 2))))))
 
 ;; First, run the Clojure compiler
 ;;     (compile-and-run true)
