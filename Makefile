@@ -29,7 +29,7 @@ endif
 # Assemble and link the program
 compile:
 	$(SED) -i -e 's/\([^_]scheme_entry\)\|\(^scheme_entry\)/ $(SCHEME_ENTRY)/g' output.s
-	$(ARCH)	gcc runtime.c output.s -o output
+	$(ARCH)	gcc -g runtime.c output.s -o output
 
 run: compile
 	@./output
