@@ -679,10 +679,14 @@
   (is (= "1\n" (compile-and-run '(do 1)))))
 
 (deftest cons-expr
-  (is (= 1 (compile-and-run '(car (cons 1 2)))))
-  (is (= 2 (compile-and-run '(cdr (cons 1 2))))))
+  (is (= "1\n" (compile-and-run '(car (cons 1 2)))))
+  (is (= "2\n" (compile-and-run '(cdr (cons 1 2))))) 
+  (is (= "5\n" (compile-and-run '(cdr (car (cons (cons 1 5) 3))))))
+  (is (= "(10 2)\n" (compile-and-run '(cons 10 2))))
+  )
 
 ;; First, run the Clojure compiler
 ;;     (compile-and-run true)
 ;; Then, run the makefile
 ;;     $ make run
+

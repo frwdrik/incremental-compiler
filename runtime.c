@@ -3,15 +3,6 @@
 #include <stdlib.h>
 #include <sys/mman.h>
 
-// 1st arg: rdi
-// 2nd arg: rsi
-// 3rd arg: rdx
-extern int scheme_entry(char *stack_base);
-
-#define bool_t 0x6F
-#define bool_f 0x2F
-#define nil    0x3F
-
 typedef struct {
 void* eax; /* 0 scratch */
 void* ebx; /* 8 preserve */
@@ -23,7 +14,14 @@ void* ebp; /* 48 preserve */
 void* esp; /* 56 preserve */
 } context;
 
+// 1st arg: rdi
+// 2nd arg: rsi
+// 3rd arg: rdx
+extern long scheme_entry(context *ctxt, char *stack_base, char *heap);
 
+#define bool_t 0x6F
+#define bool_f 0x2F
+#define nil    0x3F
 
 int fixnum(int x) {
   return (x & 3) == 0;
@@ -39,6 +37,37 @@ int isChar(int x) {
 
 int fromChar(int x) {
   return (x >> 8);
+}
+
+int isCons(int x) {
+  return (x & 0b111111) == 0b001;
+}
+
+void printCons(char *ret) {
+//    printf("(%s %s)\n", print_ret(*(long*)ret), print_ret(*(long*) (ret + 8)));
+}
+
+void print_ret(long ret) {
+    /* If x is fixnum type
+       then print content as integer */
+    if (fixnum(ret)) {
+        printf("%d\n", fromFixnum(ret));
+    }
+    if (ret == bool_t) {
+        printf("true\n");
+    }
+    if (ret == bool_f) {
+        printf("false\n");
+    }
+    if (ret == nil) {
+        printf("()\n");
+    }
+    if (isChar(ret)) {
+        printf("#\\%c\n", fromChar(ret));
+    }
+    if (isCons(ret)) {
+        printCons((char *) (ret - 1));
+    }
 }
 
 static char *allocate_protected_space(int size) {
@@ -84,25 +113,8 @@ int main() {
     //
     // | 1000 | 1001 | .... | 4000 |
 
-    int ret = scheme_entry(&ctxt, stack_base, heap);
-    /* If x is fixnum type
-     then print content as integer */
-    if (fixnum(ret)) {
-      printf("%d\n", fromFixnum(ret));
-    }
-    if (ret == bool_t) {
-      printf("true\n");
-    }
-    if (ret == bool_f) {
-      printf("false\n");
-    }
-    if (ret == nil) {
-      printf("()\n");
-    }
-    if (isChar(ret)) {
-      printf("#\\%c\n", fromChar(ret));
-    }
-
+    long ret = scheme_entry(&ctxt, stack_base, heap);
+    print_ret(ret);
     deallocate_protected_space(stack_top, stack_size);
     deallocate_protected_space(heap, heap_size);
 
