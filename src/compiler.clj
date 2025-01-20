@@ -520,10 +520,27 @@
   (let [asm
         (with-out-str
           (emit-function-header "scheme_entry")
-          (println "\tmov %rsp, %rcx")
-          (println "\tmov %rdi, %rsp")
+          ;; Storing context address
+          (println "\tmov %rdi, %rcx")
+          ;; Saving register values in context
+          (println "\tmov %rbx,  8(%rcx)")
+          (println "\tmov %rsi, 32(%rcx)")
+          (println "\tmov %rdi, 40(%rcx)")
+          (println "\tmov %rbp, 48(%rcx)")
+          (println "\tmov %rsp, 56(%rcx)")
+          ;; Set the stack pointer to stack top
+          (println "\tmov %rsi, %rsp")
+          ;; Set the heap pointer
+          (println "\tmov %rdx, %rbp")
+          ;; Begin program
           (println "\tcall __scheme_entry")
-          (println "\tmov %rcx, %rsp")
+          ;; Restore pointers
+          (println "\tmov %rbx,  8(%rcx)")
+          (println "\tmov %rsi, 32(%rcx)")
+          (println "\tmov %rdi, 40(%rcx)")
+          (println "\tmov %rbp, 48(%rcx)")
+          (println "\tmov %rsp, 56(%rcx)")
+          ;; (println "\tmov %rcx, %rsp")
           (println "\tret")
           (if (letrec? program)
             (emit-letrec program)
