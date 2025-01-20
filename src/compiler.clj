@@ -535,12 +535,12 @@
           ;; Begin program
           (println "\tcall __scheme_entry")
           ;; Restore pointers
-          (println "\tmov %rbx,  8(%rcx)")
-          (println "\tmov %rsi, 32(%rcx)")
-          (println "\tmov %rdi, 40(%rcx)")
-          (println "\tmov %rbp, 48(%rcx)")
-          (println "\tmov %rsp, 56(%rcx)")
-          ;; (println "\tmov %rcx, %rsp")
+          (println "\tmov 8(%rcx), %rbx")
+          (println "\tmov 32(%rcx), %rsi")
+          (println "\tmov 40(%rcx), %rdi")
+          (println "\tmov 48(%rcx), %rbp")
+          (println "\tmov 56(%rcx), %rsp")
+
           (println "\tret")
           (if (letrec? program)
             (emit-letrec program)
