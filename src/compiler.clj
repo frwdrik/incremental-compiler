@@ -505,6 +505,18 @@
 (def empty-env {})
 
 (defn emit-program [program]
+  ;; address of ctxt: rdi
+  ;; stack base: rsi
+  ;; heap: rdx
+  ;; We want to store the current state of registers in the context
+  ;;  rax; /* 0 scratch */
+  ;;  rbx; /* 8 preserve */
+  ;;  rcx; /* 16 scratch */
+  ;;  rdx; /* 24 scratch */
+  ;;  rsi; /* 32 preserve */
+  ;;  rdi; /* 40 preserve */
+  ;;  rbp; /* 48 preserve */
+  ;;  rsp; /* 56 preserve */
   (let [asm
         (with-out-str
           (emit-function-header "scheme_entry")

@@ -12,6 +12,19 @@ extern int scheme_entry(char *stack_base);
 #define bool_f 0x2F
 #define nil    0x3F
 
+typedef struct {
+void* eax; /* 0 scratch */
+void* ebx; /* 8 preserve */
+void* ecx; /* 16 scratch */
+void* edx; /* 24 scratch */
+void* esi; /* 32 preserve */
+void* edi; /* 40 preserve */
+void* ebp; /* 48 preserve */
+void* esp; /* 56 preserve */
+} context;
+
+
+
 int fixnum(int x) {
   return (x & 3) == 0;
 }
@@ -62,11 +75,16 @@ int main() {
     char *stack_top = allocate_protected_space(stack_size);
     char *stack_base = stack_top + stack_size;
 
+    int heap_size = (16 * 4096);
+    char *heap = allocate_protected_space(heap_size);
+
+    context ctxt;
+
     //    p                 p+stack_size (= esp)
     //
     // | 1000 | 1001 | .... | 4000 |
 
-    int ret = scheme_entry(stack_base);
+    int ret = scheme_entry(&ctxt, stack_base, heap);
     /* If x is fixnum type
      then print content as integer */
     if (fixnum(ret)) {
@@ -86,6 +104,7 @@ int main() {
     }
 
     deallocate_protected_space(stack_top, stack_size);
+    deallocate_protected_space(heap, heap_size);
 
     return 0;
 }
