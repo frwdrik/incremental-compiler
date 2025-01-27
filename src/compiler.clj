@@ -422,19 +422,17 @@
   (emit-adjust-stack (- (+ si 8))))
 
 (defn emit-tail-app [si env [_app fn-name & args]]
-  ;; Start emitting args at `(- si 8)`, so as to leave room for "call"
-  ;; to push the return address at `si`.
   (loop [[arg & rargs] args
-         si (- si 8)]
+         si si]
     (when arg
       (emit-expr si env arg)
       (emit-stack-save si)
       (recur rargs (- si 8))))
   ;; Offset = (- (rsp - 8) si)
   ;; For each arg, move arg by offset
-  (let [offset (- si)]
+  (let [offset (- (- si) 8)]
     (loop [[arg & rest] args
-           si (- si 8)]
+           si si]
       (when arg
         (emit-stack-load si)
         (emit-stack-save (+ si offset))
