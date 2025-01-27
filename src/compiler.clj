@@ -738,6 +738,21 @@
   (is (= "true\n" (compile-and-run '(leq 1 1))))
   (is (= "false\n" (compile-and-run '(leq 5 2)))))
 
+
+;; 0 1 1 2 3 5 8 13 21 34 55
+;; 0 1 2 3 4 5 6 7  8  9  10
+(deftest fibonacci
+  (is (= "55\n" (compile-and-run '(letrec [fibonacci (lambda (n)
+                                                             (if (leq n 1)
+                                                               n
+                                                               (fx+ (app fibonacci (fx- n 1)) (app fibonacci (fx- n 2)))))]
+                                          (app fibonacci 10)))))
+  (is (= "55\n" (compile-and-run '(letrec [fibonacci (lambda (fib1 fib2 counter)
+                                                             (if (leq counter 0)
+                                                               fib1
+                                                               (app fibonacci fib2 (fx+ fib1 fib2) (fx- counter 1))))]
+                                          (app fibonacci 0 1 10))))))
+
 ;; First, run the Clojure compiler
 ;;     (compile-and-run true)
 ;; Then, run the makefile
