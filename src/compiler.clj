@@ -17,17 +17,20 @@
 (def fxmask 2r11)
 (def fxtag 2r00)
 
-(def objectmask 2r111111)
+(def boolmask 2r111111)
 
 (def booltag 2r101111)
 (def bool-bit 6)
 (def bool-t 2r01101111)
 (def bool-f 2r00101111)
 
+(def charmask 2r111111)
 (def chartag 2r001111)
 
+(def nilmask 2r111111)
 (def niltag 2r111111)
 
+(def objectmask 2r111)
 (def pairtag 2r001)
 
 (defn emit-stack-save [si]
@@ -121,7 +124,7 @@
 
 (defn bool? [si env x]
   (emit-expr si env x)
-  (println (format "\tand $%s, %%al" objectmask))
+  (println (format "\tand $%s, %%al" boolmask))
   (println (format "\tcmp $%s, %%al" booltag))
   (println "\tsete %al")
   (println "\tmovzbl %al, %eax")
@@ -130,7 +133,7 @@
 
 (defn character? [si env x]
   (emit-expr si env x)
-  (println (format "\tand $%s, %%al" objectmask))
+  (println (format "\tand $%s, %%al" charmask))
   (println (format "\tcmp $%s, %%al" chartag))
   (println "\tsete %al")
   (println "\tmovzbl %al, %eax")
@@ -139,8 +142,17 @@
 
 (defn null? [si env x]
   (emit-expr si env x)
-  (println (format "\tand $%s, %%al" objectmask))
+  (println (format "\tand $%s, %%al" nilmask))
   (println (format "\tcmp $%s, %%al" niltag))
+  (println "\tsete %al")
+  (println "\tmovzbl %al, %eax")
+  (println (format "\tsal $%s, %%al" bool-bit))
+  (println (format "\tor $%s, %%al" bool-f)))
+
+(defn pair? [si env x]
+  (emit-expr si env x)
+  (println (format "\tand $%s, %%al" objectmask))
+  (println (format "\tcmp $%s, %%al" pairtag))
   (println "\tsete %al")
   (println "\tmovzbl %al, %eax")
   (println (format "\tsal $%s, %%al" bool-bit))
@@ -150,6 +162,15 @@
   (emit-expr si env x)
   (println "\tsal $6, %eax")
   (println (format "\tor $%s, %%eax" chartag)))
+
+(defn emit-not [si env x]
+  (emit-expr si env x)
+  (println (format "\tcmp $%s, %%al" bool-f))
+  ;; return #t if EXPR is false, returns #f otherwise
+  (println "\tsete %al")
+  (println "\tmovzbl %al, %eax")
+  (println (format "\tsal $%s, %%al" bool-bit))
+  (println (format "\tor $%s, %%al" bool-f)))
 
 (defn char->fixnum [si env x]
   (emit-expr si env x)
@@ -192,6 +213,10 @@
                 :emitter character?}
    'null? {:args-count 1
            :emitter null?}
+   'pair? {:args-count 1
+           :emitter pair?}
+   'not {:args-count 1
+         :emitter emit-not}
    'fixnum->char {:args-count 1
                   :emitter fixnum->char}
    'char->fixnum {:args-count 1
@@ -678,12 +703,23 @@
 (deftest do-expr
   (is (= "1\n" (compile-and-run '(do 1)))))
 
+(deftest not-expr
+  (is (= "false\n" (compile-and-run '(not true))))
+  (is (= "true\n" (compile-and-run '(not false))))
+  (is (= "false\n" (compile-and-run '(not 1)))))
+
 (deftest cons-expr
+  (is (= "false\n" (compile-and-run '(null? (cons 1 2)))))
+  (is (= "true\n" (compile-and-run '(pair? (cons 1 2)))))
+  (is (= "true\n" (compile-and-run '(pair? (cons 10 (cons 1 2))))))
+  (is (= "false\n" (compile-and-run '(not (cons 1 2)))))
+  
   (is (= "1\n" (compile-and-run '(car (cons 1 2)))))
   (is (= "2\n" (compile-and-run '(cdr (cons 1 2))))) 
   (is (= "5\n" (compile-and-run '(cdr (car (cons (cons 1 5) 3))))))
   (is (= "(10 2)\n" (compile-and-run '(cons 10 2))))
-  )
+  (is (= "(10 (1 2))\n" (compile-and-run '(cons 10 (cons 1 2)))))
+  (is (= "(10 ((1 3) 2))\n" (compile-and-run '(cons 10 (cons (cons 1 3) 2))))))
 
 ;; First, run the Clojure compiler
 ;;     (compile-and-run true)
