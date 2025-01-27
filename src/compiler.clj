@@ -197,6 +197,16 @@
   (println (format "\tsal $%s, %%al" bool-bit))
   (println (format "\tor $%s, %%al" bool-f)))
 
+(defn leq [si env x y]
+  (emit-expr si env x)
+  (emit-stack-save si)
+  (emit-expr (- si 8) env y)
+  (println (format "\tcmp %%rax, %s(%%rsp)" si))
+  (println "\tsetle %al")
+  (println "\tmovzbl %al, %eax")
+  (println (format "\tsal $%s, %%al" bool-bit))
+  (println (format "\tor $%s, %%al" bool-f)))
+
 (defn emit-immediate [x]
   (println (format "\tmovl $%d, %%eax" (immediate-rep x))))
 
@@ -232,7 +242,9 @@
    'cdr {:args-count 1
          :emitter emit-cdr}
    'car {:args-count 1
-         :emitter emit-car}})
+         :emitter emit-car}
+   'leq {:args-count 2
+           :emitter leq}})
 
 (defn emit-prim-call [si env x args]
   (let [{:keys [args-count emitter]} (prim-call x)]
@@ -720,6 +732,11 @@
   (is (= "(10 2)\n" (compile-and-run '(cons 10 2))))
   (is (= "(10 (1 2))\n" (compile-and-run '(cons 10 (cons 1 2)))))
   (is (= "(10 ((1 3) 2))\n" (compile-and-run '(cons 10 (cons (cons 1 3) 2))))))
+
+(deftest less-than-or-equal-test
+  (is (= "true\n" (compile-and-run '(leq 1 2))))
+  (is (= "true\n" (compile-and-run '(leq 1 1))))
+  (is (= "false\n" (compile-and-run '(leq 5 2)))))
 
 ;; First, run the Clojure compiler
 ;;     (compile-and-run true)
