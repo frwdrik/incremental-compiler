@@ -40,30 +40,49 @@ int fromChar(int x) {
 }
 
 int isCons(int x) {
-  return (x & 0b111111) == 0b001;
+  return (x & 0b111) == 0b001;
 }
+
+void print_ret(long ret);
 
 void printCons(char *ret) {
-//    printf("(%s %s)\n", print_ret(*(long*)ret), print_ret(*(long*) (ret + 8)));
+  printf("(");
+  print_ret(*(long*)ret);
+  printf(" ");
+  print_ret(*(long*)(ret + 8));
+  printf(")");
 }
 
+/*
+    deref    cast          char*
+      *      (long*)       ret
+
+      char denotes an 8-bit value
+      char* is a pointer which dereferenced gives an 8-bit value
+
+      (long*)ret tells the C compiler to treat ret as a pointer to
+      a 64-bit value instead.
+
+      *(long*)ret dereferences this pointer, producing a 64-bit value (a long).
+
+*/
 void print_ret(long ret) {
     /* If x is fixnum type
        then print content as integer */
     if (fixnum(ret)) {
-        printf("%d\n", fromFixnum(ret));
+        printf("%d", fromFixnum(ret));
     }
     if (ret == bool_t) {
-        printf("true\n");
+        printf("true");
     }
     if (ret == bool_f) {
-        printf("false\n");
+        printf("false");
     }
     if (ret == nil) {
-        printf("()\n");
+        printf("()");
     }
     if (isChar(ret)) {
-        printf("#\\%c\n", fromChar(ret));
+        printf("#\\%c", fromChar(ret));
     }
     if (isCons(ret)) {
         printCons((char *) (ret - 1));
@@ -115,6 +134,7 @@ int main() {
 
     long ret = scheme_entry(&ctxt, stack_base, heap);
     print_ret(ret);
+    printf("\n");
     deallocate_protected_space(stack_top, stack_size);
     deallocate_protected_space(heap, heap_size);
 
