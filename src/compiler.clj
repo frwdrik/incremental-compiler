@@ -749,6 +749,28 @@
                                               (fibonacci fib2 (+ fib1 fib2) (- counter 1))))]
                                     (fibonacci 0 1 10))))))
 
+ ;;         div
+ ;;       /     \
+ ;;      p      "d"   
+ ;;   /  |  \     
+ ;; "a"  b  "c"
+ ;;      |   
+ ;;     "x" 
+
+;; NODE: LEAF | INTERNAL
+;; LEAF: (cons <char> nil)
+;; INTERNAL: (cons <char> NODES)
+;; NODES: (cons NODE NODES) | (cons NODE nil)
+;; (let [x (cons \x nil)
+;;       b (cons \b (cons x nil))
+;;       a (cons \a nil)
+;;       c (cons \c nil)
+;;       p (cons \p (cons a (cons b (cons c nil))))
+;;       d (cons \d nil)
+;;       div (cons \D (cons p (cons d nil)))]
+;;   div)
+
+;; (cons \a (cons \x (cons \c (cons \d nil))))
 
 ;; First, run the Clojure compiler
 ;;     (compile-and-run true)
