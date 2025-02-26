@@ -265,10 +265,6 @@
   (and (seq? x)
        (= 'letfn (first x))))
 
-(defn app? [x]
-  (and (seq? x)
-       (= 'app (first x))))
-
 ;; 	.text
 ;; 	.globl	main
 ;; main:
@@ -385,7 +381,7 @@
 
 (declare emit-expr)
 
-(defn emit-app [si env [_app fn-name & args]]
+(defn emit-app [si env [fn-name & args]]
   ;; si = -100  (random numbers)
   ;; rsp = 1000
   ;;
@@ -421,7 +417,7 @@
   (emit-call fn-name)          ;; 1. decrement rsp to 900, 2. save return address at memory pointed to by rsp
   (emit-adjust-stack (- (+ si 8))))
 
-(defn emit-tail-app [si env [_app fn-name & args]]
+(defn emit-tail-app [si env [fn-name & args]]
   (loop [[arg & rargs] args
          si si]
     (when arg
@@ -492,6 +488,10 @@
          (contains? prim-call (first x)))
     (emit-prim-call si env (first x) (rest x))
 
+    (and (list? x)
+         (contains? env (first x)))
+    (emit-app si env x)
+
     (if? x)
     (emit-if si env x)
 
@@ -505,10 +505,7 @@
     (emit-do si env x)
 
     (letfn? x)
-    (emit-letfn x)
-
-    (app? x)
-    (emit-app si env x)))
+    (emit-letfn x)))
 
 (defn emit-tail-expr [si env x]
   (cond
@@ -521,6 +518,10 @@
     (do (emit-prim-call si env (first x) (rest x))
         (emit-ret))
 
+    (and (list? x)
+         (contains? env (first x)))
+    (emit-tail-app si env x)
+
     (if? x)
     (emit-tail-if si env x)
 
@@ -532,10 +533,7 @@
         (emit-ret))
 
     (do? x)
-    (emit-tail-do si env x)
-
-    (app? x)
-    (emit-tail-app si env x)))
+    (emit-tail-do si env x)))
 
 (def empty-env {})
 
@@ -660,7 +658,7 @@
 ;; (letfn [add-1 (lambda (x)
 ;;                        (fx+ 1 x))]
 ;;         ;; body
-;;         (app add-1 3))
+;;         (add-1 3))
 
 ;; The similar code in JS would look like:
 ;; { const add1 = (x) => x+1;
@@ -671,27 +669,27 @@
   (is (= "10\n" (compile-and-run '(letfn [] (let [x 5] (fx+ x x))))))
   (is (= "7\n" (compile-and-run '(letfn [f (lambda () 5)] 7))))
   (is (= "12\n" (compile-and-run '(letfn [f (lambda () 5)] (let [x 12] x)))))
-  (is (= "5\n" (compile-and-run '(letfn [f (lambda () 5)] (app f)))))
-  (is (= "5\n" (compile-and-run '(letfn [f (lambda () 5)] (let [x (app f)] x)))))
-  (is (= "11\n" (compile-and-run '(letfn [f (lambda () 5)] (fx+ (app f) 6)))))
-  (is (= "15\n" (compile-and-run '(letfn [f (lambda () 5)] (fx- 20 (app f))))))
-  (is (= "10\n" (compile-and-run '(letfn [f (lambda () 5)] (fx+ (app f) (app f))))))
+  (is (= "5\n" (compile-and-run '(letfn [f (lambda () 5)] (f)))))
+  (is (= "5\n" (compile-and-run '(letfn [f (lambda () 5)] (let [x (f)] x)))))
+  (is (= "11\n" (compile-and-run '(letfn [f (lambda () 5)] (fx+ (f) 6)))))
+  (is (= "15\n" (compile-and-run '(letfn [f (lambda () 5)] (fx- 20 (f))))))
+  (is (= "10\n" (compile-and-run '(letfn [f (lambda () 5)] (fx+ (f) (f))))))
   (is (= "-9\n" (compile-and-run '(letfn [f (lambda (x) (fx- x 10))]
                                           (let [x 1]
-                                            (app f x))))))
+                                            (f x))))))
   (is (= "-1\n" (compile-and-run '(letfn [f (lambda (x y) (fx- x y))]
-                                          (app f 2 3)))))
+                                          (f 2 3)))))
   ;; Suggestion: Support mutually recursive functions
   #_(is (= "-9\n"
          (compile-and-run
-          '(letfn [f (lambda (x) (if (bool? x) 123 (app g false)))
-                    g (lambda (y) (app f y))]
+          '(letfn [f (lambda (x) (if (bool? x) 123 (g false)))
+                    g (lambda (y) (f y))]
                    ;; This call should go like
                    ;;   - (g 1)
                    ;;   - (f 1)
                    ;;   - (g false)
                    ;;   - (f false) => done, return 123
-                   (app g 1)))))
+                   (g 1)))))
   )
 
 (deftest emit-tail-expr-test
@@ -699,12 +697,12 @@
                                                        (if (fxzero? x)
                                                          true
                                                          false))]
-                                            (app f 0)))))
+                                            (f 0)))))
   (is (= "9\n" (compile-and-run '(letfn [f (lambda (x)
                                                     (if (fxzero? x)
                                                       9
-                                                      (app f (fx- x 1))))]
-                                         (app f 3))))))
+                                                      (f (fx- x 1))))]
+                                         (f 3))))))
 (deftest let-expr
   (is (= "1\n" (compile-and-run '(let [x 1] x))))
   (is (= "-5\n" (compile-and-run '(let [x 1] (fx+ x 3) (fx- x 6)))))
@@ -743,13 +741,13 @@
   (is (= "55\n" (compile-and-run '(letfn [fibonacci (lambda (n)
                                                              (if (leq n 1)
                                                                n
-                                                               (fx+ (app fibonacci (fx- n 1)) (app fibonacci (fx- n 2)))))]
-                                          (app fibonacci 10)))))
+                                                               (fx+ (fibonacci (fx- n 1)) (fibonacci (fx- n 2)))))]
+                                          (fibonacci 10)))))
   (is (= "55\n" (compile-and-run '(letfn [fibonacci (lambda (fib1 fib2 counter)
                                                              (if (leq counter 0)
                                                                fib1
-                                                               (app fibonacci fib2 (fx+ fib1 fib2) (fx- counter 1))))]
-                                          (app fibonacci 0 1 10))))))
+                                                               (fibonacci fib2 (fx+ fib1 fib2) (fx- counter 1))))]
+                                          (fibonacci 0 1 10))))))
 
 ;; First, run the Clojure compiler
 ;;     (compile-and-run true)
