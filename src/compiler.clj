@@ -435,16 +435,16 @@
         (recur rest (- si 8)))))
   (println (str "\tjmp " fn-name)))
 
-(defn emit-lambda [env label [_lambda args & body]]
+(defn emit-lambda [env label [args & body]]
   (emit-function-header label)
   (let [env (merge env
                    (zipmap args (iterate #(- % 8) (- 8))))]
     (emit-tail-expr (* (inc (count args)) -8) env (cons 'do body))))
 
 (defn emit-letfn [[_letfn bindings & body]]
-  (let [lambdas (take-nth 2 (drop 1 bindings))
-        lvars (take-nth 2 bindings)
+  (let [lvars (map first bindings)
         labels lvars
+        lambdas (map rest bindings)
         env (zipmap lvars labels)]
     (mapv (partial emit-lambda env) labels lambdas)
     (emit-scheme-entry (cons 'do body) env)))
@@ -655,7 +655,7 @@
 
 ;; In our "scheme" language, we can define and apply our own functions
 ;; like this:
-;; (letfn [add-1 (lambda (x)
+;; (letfn [add-1 (fn (x)
 ;;                        (fx+ 1 x))]
 ;;         ;; body
 ;;         (add-1 3))
@@ -667,38 +667,38 @@
 (deftest letfn-test
   (is (= "12\n" (compile-and-run '(letfn [] 12))))
   (is (= "10\n" (compile-and-run '(letfn [] (let [x 5] (fx+ x x))))))
-  (is (= "7\n" (compile-and-run '(letfn [f (lambda () 5)] 7))))
-  (is (= "12\n" (compile-and-run '(letfn [f (lambda () 5)] (let [x 12] x)))))
-  (is (= "5\n" (compile-and-run '(letfn [f (lambda () 5)] (f)))))
-  (is (= "5\n" (compile-and-run '(letfn [f (lambda () 5)] (let [x (f)] x)))))
-  (is (= "11\n" (compile-and-run '(letfn [f (lambda () 5)] (fx+ (f) 6)))))
-  (is (= "15\n" (compile-and-run '(letfn [f (lambda () 5)] (fx- 20 (f))))))
-  (is (= "10\n" (compile-and-run '(letfn [f (lambda () 5)] (fx+ (f) (f))))))
-  (is (= "-9\n" (compile-and-run '(letfn [f (lambda (x) (fx- x 10))]
-                                          (let [x 1]
-                                            (f x))))))
-  (is (= "-1\n" (compile-and-run '(letfn [f (lambda (x y) (fx- x y))]
-                                          (f 2 3)))))
+  (is (= "7\n" (compile-and-run  '(letfn [(f () 5)] 7))))
+  (is (= "12\n" (compile-and-run '(letfn [(f () 5)] (let [x 12] x)))))
+  (is (= "5\n" (compile-and-run  '(letfn [(f () 5)] (f)))))
+  (is (= "5\n" (compile-and-run  '(letfn [(f () 5)] (let [x (f)] x)))))
+  (is (= "11\n" (compile-and-run '(letfn [(f () 5)] (fx+ (f) 6)))))
+  (is (= "15\n" (compile-and-run '(letfn [(f () 5)] (fx- 20 (f))))))
+  (is (= "10\n" (compile-and-run '(letfn [(f () 5)] (fx+ (f) (f))))))
+  (is (= "-9\n" (compile-and-run '(letfn [(f (x) (fx- x 10))]
+                                    (let [x 1]
+                                      (f x))))))
+  (is (= "-1\n" (compile-and-run '(letfn [(f (x y) (fx- x y))]
+                                    (f 2 3)))))
   ;; Suggestion: Support mutually recursive functions
   #_(is (= "-9\n"
-         (compile-and-run
-          '(letfn [f (lambda (x) (if (bool? x) 123 (g false)))
-                    g (lambda (y) (f y))]
-                   ;; This call should go like
-                   ;;   - (g 1)
-                   ;;   - (f 1)
-                   ;;   - (g false)
-                   ;;   - (f false) => done, return 123
-                   (g 1)))))
+           (compile-and-run
+            '(letfn [(f (x) (if (bool? x) 123 (g false)))
+                     (g (y) (f y))]
+               ;; This call should go like
+               ;;   - (g 1)
+               ;;   - (f 1)
+               ;;   - (g false)
+               ;;   - (f false) => done, return 123
+               (g 1)))))
   )
 
 (deftest emit-tail-expr-test
-  (is (= "true\n" (compile-and-run '(letfn [f (lambda (x)
+  (is (= "true\n" (compile-and-run '(letfn [(f (x)
                                                        (if (fxzero? x)
                                                          true
                                                          false))]
                                             (f 0)))))
-  (is (= "9\n" (compile-and-run '(letfn [f (lambda (x)
+  (is (= "9\n" (compile-and-run '(letfn [(f (x)
                                                     (if (fxzero? x)
                                                       9
                                                       (f (fx- x 1))))]
@@ -738,16 +738,17 @@
 ;; 0 1 1 2 3 5 8 13 21 34 55
 ;; 0 1 2 3 4 5 6 7  8  9  10
 (deftest fibonacci
-  (is (= "55\n" (compile-and-run '(letfn [fibonacci (lambda (n)
-                                                             (if (leq n 1)
-                                                               n
-                                                               (fx+ (fibonacci (fx- n 1)) (fibonacci (fx- n 2)))))]
-                                          (fibonacci 10)))))
-  (is (= "55\n" (compile-and-run '(letfn [fibonacci (lambda (fib1 fib2 counter)
-                                                             (if (leq counter 0)
-                                                               fib1
-                                                               (fibonacci fib2 (fx+ fib1 fib2) (fx- counter 1))))]
-                                          (fibonacci 0 1 10))))))
+  (is (= "55\n" (compile-and-run '(letfn [(fibonacci (n)
+                                            (if (leq n 1)
+                                              n
+                                              (fx+ (fibonacci (fx- n 1)) (fibonacci (fx- n 2)))))]
+                                    (fibonacci 10)))))
+  (is (= "55\n" (compile-and-run '(letfn [(fibonacci (fib1 fib2 counter)
+                                            (if (leq counter 0)
+                                              fib1
+                                              (fibonacci fib2 (fx+ fib1 fib2) (fx- counter 1))))]
+                                    (fibonacci 0 1 10))))))
+
 
 ;; First, run the Clojure compiler
 ;;     (compile-and-run true)
