@@ -339,7 +339,7 @@
       ;;   3)
       (do
         (emit-expr si env (second bindings))
-        (println (format "\tmov %%eax, %s(%%rsp)" si))
+        (println (format "\tmov %%rax, %s(%%rsp)" si))
         (recur (- si 8)
                (assoc env (first bindings) si)
                (drop 2 bindings))))))
@@ -352,7 +352,7 @@
       (emit-tail-expr si env (cons 'do body))
       (do
         (emit-expr si env (second bindings))
-        (println (format "\tmov %%eax, %s(%%rsp)" si))
+        (println (format "\tmov %%rax, %s(%%rsp)" si))
         (recur (- si 8)
                (assoc env (first bindings) si)
                (drop 2 bindings))))))
@@ -476,7 +476,7 @@
 
 (defn emit-variable [env var]
   (if-let [si (get env var)]
-    (println (format "\tmov %s(%%rsp), %%eax" si))
+    (println (format "\tmov %s(%%rsp), %%rax" si))
     (throw (ex-info "Unknown local" {:local var :env env}))))
 
 (defn emit-expr [si env x]
@@ -761,16 +761,20 @@
 ;; LEAF: (cons <char> nil)
 ;; INTERNAL: (cons <char> NODES)
 ;; NODES: (cons NODE NODES) | (cons NODE nil)
-;; (let [x (cons \x nil)
-;;       b (cons \b (cons x nil))
-;;       a (cons \a nil)
-;;       c (cons \c nil)
-;;       p (cons \p (cons a (cons b (cons c nil))))
-;;       d (cons \d nil)
-;;       div (cons \D (cons p (cons d nil)))]
-;;   div)
+(compile-and-run '(let [x (cons \x nil)
+        b (cons \b (cons x nil))
+        a (cons \a nil)
+        c (cons \c nil)
+        p (cons \p (cons a (cons b (cons c nil))))
+        d (cons \d nil)
+        div (cons \D (cons p (cons d nil)))]
+    div))
+
+(compile-and-run '(let [x (cons nil nil)] x))
 
 ;; (cons \a (cons \x (cons \c (cons \d nil))))
+
+(compile-and-run '(letfn))
 
 ;; First, run the Clojure compiler
 ;;     (compile-and-run true)
