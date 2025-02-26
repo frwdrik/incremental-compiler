@@ -261,9 +261,9 @@
        (= 'if (first x))
        (= (count x) 4)))
 
-(defn letrec? [x]
+(defn letfn? [x]
   (and (seq? x)
-       (= 'letrec (first x))))
+       (= 'letfn (first x))))
 
 (defn app? [x]
   (and (seq? x)
@@ -445,7 +445,7 @@
                    (zipmap args (iterate #(- % 8) (- 8))))]
     (emit-tail-expr (* (inc (count args)) -8) env (cons 'do body))))
 
-(defn emit-letrec [[_letrec bindings & body]]
+(defn emit-letfn [[_letfn bindings & body]]
   (let [lambdas (take-nth 2 (drop 1 bindings))
         lvars (take-nth 2 bindings)
         labels lvars
@@ -504,8 +504,8 @@
     (do? x)
     (emit-do si env x)
 
-    (letrec? x)
-    (emit-letrec x)
+    (letfn? x)
+    (emit-letfn x)
 
     (app? x)
     (emit-app si env x)))
@@ -577,8 +577,8 @@
           (println "\tmov 56(%rcx), %rsp")
 
           (println "\tret")
-          (if (letrec? program)
-            (emit-letrec program)
+          (if (letfn? program)
+            (emit-letfn program)
             (emit-scheme-entry program empty-env)))]
     (spit "output.s" asm)))
 
@@ -657,7 +657,7 @@
 
 ;; In our "scheme" language, we can define and apply our own functions
 ;; like this:
-;; (letrec [add-1 (lambda (x)
+;; (letfn [add-1 (lambda (x)
 ;;                        (fx+ 1 x))]
 ;;         ;; body
 ;;         (app add-1 3))
@@ -666,25 +666,25 @@
 ;; { const add1 = (x) => x+1;
 ;;   return add1(3); }
 
-(deftest letrec-test
-  (is (= "12\n" (compile-and-run '(letrec [] 12))))
-  (is (= "10\n" (compile-and-run '(letrec [] (let [x 5] (fx+ x x))))))
-  (is (= "7\n" (compile-and-run '(letrec [f (lambda () 5)] 7))))
-  (is (= "12\n" (compile-and-run '(letrec [f (lambda () 5)] (let [x 12] x)))))
-  (is (= "5\n" (compile-and-run '(letrec [f (lambda () 5)] (app f)))))
-  (is (= "5\n" (compile-and-run '(letrec [f (lambda () 5)] (let [x (app f)] x)))))
-  (is (= "11\n" (compile-and-run '(letrec [f (lambda () 5)] (fx+ (app f) 6)))))
-  (is (= "15\n" (compile-and-run '(letrec [f (lambda () 5)] (fx- 20 (app f))))))
-  (is (= "10\n" (compile-and-run '(letrec [f (lambda () 5)] (fx+ (app f) (app f))))))
-  (is (= "-9\n" (compile-and-run '(letrec [f (lambda (x) (fx- x 10))]
+(deftest letfn-test
+  (is (= "12\n" (compile-and-run '(letfn [] 12))))
+  (is (= "10\n" (compile-and-run '(letfn [] (let [x 5] (fx+ x x))))))
+  (is (= "7\n" (compile-and-run '(letfn [f (lambda () 5)] 7))))
+  (is (= "12\n" (compile-and-run '(letfn [f (lambda () 5)] (let [x 12] x)))))
+  (is (= "5\n" (compile-and-run '(letfn [f (lambda () 5)] (app f)))))
+  (is (= "5\n" (compile-and-run '(letfn [f (lambda () 5)] (let [x (app f)] x)))))
+  (is (= "11\n" (compile-and-run '(letfn [f (lambda () 5)] (fx+ (app f) 6)))))
+  (is (= "15\n" (compile-and-run '(letfn [f (lambda () 5)] (fx- 20 (app f))))))
+  (is (= "10\n" (compile-and-run '(letfn [f (lambda () 5)] (fx+ (app f) (app f))))))
+  (is (= "-9\n" (compile-and-run '(letfn [f (lambda (x) (fx- x 10))]
                                           (let [x 1]
                                             (app f x))))))
-  (is (= "-1\n" (compile-and-run '(letrec [f (lambda (x y) (fx- x y))]
+  (is (= "-1\n" (compile-and-run '(letfn [f (lambda (x y) (fx- x y))]
                                           (app f 2 3)))))
   ;; Suggestion: Support mutually recursive functions
   #_(is (= "-9\n"
          (compile-and-run
-          '(letrec [f (lambda (x) (if (bool? x) 123 (app g false)))
+          '(letfn [f (lambda (x) (if (bool? x) 123 (app g false)))
                     g (lambda (y) (app f y))]
                    ;; This call should go like
                    ;;   - (g 1)
@@ -695,12 +695,12 @@
   )
 
 (deftest emit-tail-expr-test
-  (is (= "true\n" (compile-and-run '(letrec [f (lambda (x)
+  (is (= "true\n" (compile-and-run '(letfn [f (lambda (x)
                                                        (if (fxzero? x)
                                                          true
                                                          false))]
                                             (app f 0)))))
-  (is (= "9\n" (compile-and-run '(letrec [f (lambda (x)
+  (is (= "9\n" (compile-and-run '(letfn [f (lambda (x)
                                                     (if (fxzero? x)
                                                       9
                                                       (app f (fx- x 1))))]
@@ -740,12 +740,12 @@
 ;; 0 1 1 2 3 5 8 13 21 34 55
 ;; 0 1 2 3 4 5 6 7  8  9  10
 (deftest fibonacci
-  (is (= "55\n" (compile-and-run '(letrec [fibonacci (lambda (n)
+  (is (= "55\n" (compile-and-run '(letfn [fibonacci (lambda (n)
                                                              (if (leq n 1)
                                                                n
                                                                (fx+ (app fibonacci (fx- n 1)) (app fibonacci (fx- n 2)))))]
                                           (app fibonacci 10)))))
-  (is (= "55\n" (compile-and-run '(letrec [fibonacci (lambda (fib1 fib2 counter)
+  (is (= "55\n" (compile-and-run '(letfn [fibonacci (lambda (fib1 fib2 counter)
                                                              (if (leq counter 0)
                                                                fib1
                                                                (app fibonacci fib2 (fx+ fib1 fib2) (fx- counter 1))))]
