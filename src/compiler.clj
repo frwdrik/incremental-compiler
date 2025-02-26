@@ -231,12 +231,12 @@
                   :emitter fixnum->char}
    'char->fixnum {:args-count 1
                   :emitter char->fixnum }
-   'fx+ {:args-count 2
-         :emitter fx+}
-   'fx- {:args-count 2
-         :emitter fx-}
-   'fxzero? {:args-count 1
-             :emitter fxzero?}
+   '+ {:args-count 2
+       :emitter fx+}
+   '- {:args-count 2
+       :emitter fx-}
+   'zero? {:args-count 1
+           :emitter fxzero?}
    'cons {:args-count 2
          :emitter emit-cons}
    'cdr {:args-count 1
@@ -633,10 +633,10 @@
   
   (is (= "65\n" (compile-and-run '(char->fixnum (fixnum->char 65)))))
 
-  (is (= "true\n" (compile-and-run '(fxzero? 0))))
-  (is (= "false\n" (compile-and-run '(fxzero? 1))))
-  (is (= "false\n" (compile-and-run '(fxzero? (fx+ 1 0)))))
-  (is (= "true\n" (compile-and-run '(fxzero? (fx- 99 (fx+ 90 9)))))))
+  (is (= "true\n" (compile-and-run '(zero? 0))))
+  (is (= "false\n" (compile-and-run '(zero? 1))))
+  (is (= "false\n" (compile-and-run '(zero? (+ 1 0)))))
+  (is (= "true\n" (compile-and-run '(zero? (- 99 (+ 90 9)))))))
 
 (deftest if-expr
   (is (= "true\n" (compile-and-run '(if false false true))))
@@ -646,17 +646,17 @@
   (is (= "3\n" (compile-and-run '(if true 3 5)))))
 
 (deftest binary-prim-call-test
-  (is (= "5\n" (compile-and-run '(fx+ 2 3))))
-  (is (= "10\n" (compile-and-run '(fx+ 2 (fx+ 3 5)))))
-  (is (= "2\n" (compile-and-run '(fx- 5 3))))
-  (is (= "-2\n" (compile-and-run '(fx- 3 5))))
-  (is (= "12\n" (compile-and-run '(fx- 10 (fx- 3 5)))))
-  (is (= "2\n" (compile-and-run '(fx- 10 (fx+ 3 5))))))
+  (is (= "5\n" (compile-and-run '(+ 2 3))))
+  (is (= "10\n" (compile-and-run '(+ 2 (+ 3 5)))))
+  (is (= "2\n" (compile-and-run '(- 5 3))))
+  (is (= "-2\n" (compile-and-run '(- 3 5))))
+  (is (= "12\n" (compile-and-run '(- 10 (- 3 5)))))
+  (is (= "2\n" (compile-and-run '(- 10 (+ 3 5))))))
 
 ;; In our "scheme" language, we can define and apply our own functions
 ;; like this:
 ;; (letfn [add-1 (fn (x)
-;;                        (fx+ 1 x))]
+;;                        (+ 1 x))]
 ;;         ;; body
 ;;         (add-1 3))
 
@@ -666,18 +666,18 @@
 
 (deftest letfn-test
   (is (= "12\n" (compile-and-run '(letfn [] 12))))
-  (is (= "10\n" (compile-and-run '(letfn [] (let [x 5] (fx+ x x))))))
+  (is (= "10\n" (compile-and-run '(letfn [] (let [x 5] (+ x x))))))
   (is (= "7\n" (compile-and-run  '(letfn [(f () 5)] 7))))
   (is (= "12\n" (compile-and-run '(letfn [(f () 5)] (let [x 12] x)))))
   (is (= "5\n" (compile-and-run  '(letfn [(f () 5)] (f)))))
   (is (= "5\n" (compile-and-run  '(letfn [(f () 5)] (let [x (f)] x)))))
-  (is (= "11\n" (compile-and-run '(letfn [(f () 5)] (fx+ (f) 6)))))
-  (is (= "15\n" (compile-and-run '(letfn [(f () 5)] (fx- 20 (f))))))
-  (is (= "10\n" (compile-and-run '(letfn [(f () 5)] (fx+ (f) (f))))))
-  (is (= "-9\n" (compile-and-run '(letfn [(f (x) (fx- x 10))]
+  (is (= "11\n" (compile-and-run '(letfn [(f () 5)] (+ (f) 6)))))
+  (is (= "15\n" (compile-and-run '(letfn [(f () 5)] (- 20 (f))))))
+  (is (= "10\n" (compile-and-run '(letfn [(f () 5)] (+ (f) (f))))))
+  (is (= "-9\n" (compile-and-run '(letfn [(f (x) (- x 10))]
                                     (let [x 1]
                                       (f x))))))
-  (is (= "-1\n" (compile-and-run '(letfn [(f (x y) (fx- x y))]
+  (is (= "-1\n" (compile-and-run '(letfn [(f (x y) (- x y))]
                                     (f 2 3)))))
   ;; Suggestion: Support mutually recursive functions
   #_(is (= "-9\n"
@@ -694,19 +694,19 @@
 
 (deftest emit-tail-expr-test
   (is (= "true\n" (compile-and-run '(letfn [(f (x)
-                                                       (if (fxzero? x)
+                                                       (if (zero? x)
                                                          true
                                                          false))]
                                             (f 0)))))
   (is (= "9\n" (compile-and-run '(letfn [(f (x)
-                                                    (if (fxzero? x)
+                                                    (if (zero? x)
                                                       9
-                                                      (f (fx- x 1))))]
+                                                      (f (- x 1))))]
                                          (f 3))))))
 (deftest let-expr
   (is (= "1\n" (compile-and-run '(let [x 1] x))))
-  (is (= "-5\n" (compile-and-run '(let [x 1] (fx+ x 3) (fx- x 6)))))
-  (is (= "-5\n" (compile-and-run '(let [x 1] (fx- x 6))))))
+  (is (= "-5\n" (compile-and-run '(let [x 1] (+ x 3) (- x 6)))))
+  (is (= "-5\n" (compile-and-run '(let [x 1] (- x 6))))))
 
 (deftest do-expr
   (is (= "1\n" (compile-and-run '(do 1)))))
@@ -741,12 +741,12 @@
   (is (= "55\n" (compile-and-run '(letfn [(fibonacci (n)
                                             (if (leq n 1)
                                               n
-                                              (fx+ (fibonacci (fx- n 1)) (fibonacci (fx- n 2)))))]
+                                              (+ (fibonacci (- n 1)) (fibonacci (- n 2)))))]
                                     (fibonacci 10)))))
   (is (= "55\n" (compile-and-run '(letfn [(fibonacci (fib1 fib2 counter)
                                             (if (leq counter 0)
                                               fib1
-                                              (fibonacci fib2 (fx+ fib1 fib2) (fx- counter 1))))]
+                                              (fibonacci fib2 (+ fib1 fib2) (- counter 1))))]
                                     (fibonacci 0 1 10))))))
 
 
