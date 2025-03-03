@@ -104,11 +104,11 @@
 
 (defn fxadd1 [si env x]
   (emit-expr si env x)
-  (println (format "\taddl $%s, %%eax" (immediate-rep 1))))
+  (println (format "\taddl $%s, %%rax" (immediate-rep 1))))
 
 (defn fxsub1 [si env x]
   (emit-expr si env x)
-  (println (format "\tsubl $%s, %%eax" (immediate-rep 1))))
+  (println (format "\tsubl $%s, %%rax" (immediate-rep 1))))
 
 (defn fixnum? [si env x]
   (emit-expr si env x)
@@ -179,15 +179,15 @@
 
 (defn fx+ [si env x y]
   (emit-expr si env x)
-  (println (format "\tmovl %%eax, %s(%%rsp)" si))
+  (println (format "\tmovl %%rax, %s(%%rsp)" si))
   (emit-expr (- si 8) env y)
-  (println (format "\taddl %s(%%rsp), %%eax" si)))
+  (println (format "\taddl %s(%%rsp), %%rax" si)))
 
 (defn fx- [si env x y]
   (emit-expr si env y)
-  (println (format "\tmovl %%eax, %s(%%rsp)" si))
+  (println (format "\tmovl %%rax, %s(%%rsp)" si))
   (emit-expr (- si 8) env x)
-  (println (format "\tsubl %s(%%rsp), %%eax" si)))
+  (println (format "\tsubl %s(%%rsp), %%rax" si)))
 
 (defn fxzero? [si env x]
   (emit-expr si env x)
