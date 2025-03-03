@@ -208,7 +208,7 @@
   (println (format "\tor $%s, %%al" bool-f)))
 
 (defn emit-immediate [x]
-  (println (format "\tmovl $%d, %%eax" (immediate-rep x))))
+  (println (format "\tmovl $%d, %%rax" (immediate-rep x))))
 
 (def prim-call
   {'fxadd1 {:args-count 1
@@ -772,7 +772,19 @@
 
 (compile-and-run '(let [x (cons nil nil)] x))
 
-;; (cons \a (cons \x (cons \c (cons \d nil))))
+(compile-and-run '(let [a 1]
+                    (cons a nil)))
+
+(compile-and-run '(let [a 1]
+                    (cons a nil)))
+
+(compile-and-run '(let [a (cons 1 1)]
+                    (cons 1 1)))
+
+(compile-and-run '(let [a (cons 1 1)]
+                    a))
+
+(compile-and-run '(cons \a (cons \x (cons \c (cons \d nil)))))
 
 (compile-and-run '(letfn))
 
@@ -781,3 +793,6 @@
 ;; Then, run the makefile
 ;;     $ make run
 
+
+;; 0xf7f9d001
+;; 0x7ffff
