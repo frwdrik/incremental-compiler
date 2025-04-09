@@ -104,11 +104,11 @@
 
 (defn fxadd1 [si env x]
   (emit-expr si env x)
-  (println (format "\taddl $%s, %%rax" (immediate-rep 1))))
+  (println (format "\taddq $%s, %%rax" (immediate-rep 1))))
 
 (defn fxsub1 [si env x]
   (emit-expr si env x)
-  (println (format "\tsubl $%s, %%rax" (immediate-rep 1))))
+  (println (format "\tsubq $%s, %%rax" (immediate-rep 1))))
 
 (defn fixnum? [si env x]
   (emit-expr si env x)
@@ -179,15 +179,15 @@
 
 (defn fx+ [si env x y]
   (emit-expr si env x)
-  (println (format "\tmovl %%rax, %s(%%rsp)" si))
+  (println (format "\tmovq %%rax, %s(%%rsp)" si))
   (emit-expr (- si 8) env y)
-  (println (format "\taddl %s(%%rsp), %%rax" si)))
+  (println (format "\taddq %s(%%rsp), %%rax" si)))
 
 (defn fx- [si env x y]
   (emit-expr si env y)
-  (println (format "\tmovl %%rax, %s(%%rsp)" si))
+  (println (format "\tmovq %%rax, %s(%%rsp)" si))
   (emit-expr (- si 8) env x)
-  (println (format "\tsubl %s(%%rsp), %%rax" si)))
+  (println (format "\tsubq %s(%%rsp), %%rax" si)))
 
 (defn fxzero? [si env x]
   (emit-expr si env x)
@@ -208,7 +208,7 @@
   (println (format "\tor $%s, %%al" bool-f)))
 
 (defn emit-immediate [x]
-  (println (format "\tmovl $%d, %%rax" (immediate-rep x))))
+  (println (format "\tmovq $%d, %%rax" (immediate-rep x))))
 
 (def prim-call
   {'fxadd1 {:args-count 1
@@ -738,17 +738,25 @@
 ;; 0 1 1 2 3 5 8 13 21 34 55
 ;; 0 1 2 3 4 5 6 7  8  9  10
 (deftest fibonacci
-  (is (= "55\n" (compile-and-run '(letfn [(fibonacci (n)
-                                            (if (leq n 1)
-                                              n
-                                              (+ (fibonacci (- n 1)) (fibonacci (- n 2)))))]
-                                    (fibonacci 10)))))
-  (is (= "55\n" (compile-and-run '(letfn [(fibonacci (fib1 fib2 counter)
-                                            (if (leq counter 0)
-                                              fib1
-                                              (fibonacci fib2 (+ fib1 fib2) (- counter 1))))]
-                                    (fibonacci 0 1 10))))))
+  (is (= "55\n" (compile-and-run
+                 '(letfn [(fibonacci (n)
+                            (if (leq n 1)
+                              n
+                              (+ (fibonacci (- n 1)) (fibonacci (- n 2)))))]
+                    (fibonacci 10)))))
+  (is (= "55\n" (compile-and-run
+                 '(letfn [(fibonacci (fib1 fib2 counter)
+                            (if (leq counter 0)
+                              fib1
+                              (fibonacci fib2 (+ fib1 fib2) (- counter 1))))]
+                    (fibonacci 0 1 10))))))
 
+(compile-and-run
+                 '(letfn [(fibonacci (fib1 fib2 counter)
+                            (if (leq counter 0)
+                              fib1
+                              (fibonacci fib2 (+ fib1 fib2) (- counter 1))))]
+                    (fibonacci 0 1 100)))
  ;;         div
  ;;       /     \
  ;;      p      "d"   
